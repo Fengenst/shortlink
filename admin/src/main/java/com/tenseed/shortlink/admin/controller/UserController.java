@@ -3,8 +3,11 @@ package com.tenseed.shortlink.admin.controller;
 import cn.hutool.core.bean.BeanUtil;
 import com.tenseed.shortlink.admin.common.convention.result.Result;
 import com.tenseed.shortlink.admin.common.convention.result.Results;
+import com.tenseed.shortlink.admin.dto.req.UserLoginReqDTO;
 import com.tenseed.shortlink.admin.dto.req.UserRegisterReqDTO;
+import com.tenseed.shortlink.admin.dto.req.UserUpdateReqDTO;
 import com.tenseed.shortlink.admin.dto.resp.UserActualRespDTO;
+import com.tenseed.shortlink.admin.dto.resp.UserLoginRespDTO;
 import com.tenseed.shortlink.admin.dto.resp.UserRespDTO;
 import com.tenseed.shortlink.admin.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -50,5 +53,30 @@ public class UserController {
     public Result<Void> register(@RequestBody UserRegisterReqDTO requestParam) {
         userService.register(requestParam);
         return Results.success();
+    }
+
+    /**
+     * 用户信息修改
+     */
+    @PutMapping("/api/shortlink/v1/user/update")
+    public Result<Void> update(@RequestBody UserUpdateReqDTO requestParam) {
+        userService.update(requestParam);
+        return Results.success();
+    }
+
+    /**
+     * 用户登录
+     */
+    @PostMapping("/api/shortlink/v1/user/login")
+    public Result<UserLoginRespDTO> login(@RequestBody UserLoginReqDTO requestParam) {
+        return Results.success(userService.login(requestParam));
+    }
+
+    /**
+     * 检查用户是否登录
+     */
+    @GetMapping("/api/shortlink/v1/user/check-login")
+    public Result<Boolean> checkLogin(@RequestParam("token") String token) {
+        return Results.success(userService.checkLogin(token));
     }
 }
