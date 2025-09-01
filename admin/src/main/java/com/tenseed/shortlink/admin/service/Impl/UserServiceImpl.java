@@ -98,15 +98,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         if (userDO == null) {
             throw new ClientException(UserErrorCodeEnum.USER_NULL);
         }
-        // 生成一个唯一标识  ----uuid
-        String uuid = UUID.randomUUID().toString();
-        //将uuid作为唯一key,userDO作为value,设置一个有效期,最后存入redis中
-        stringRedisTemplate.opsForValue().set(uuid, JSON.toJSONString(userDO), 50L, TimeUnit.MINUTES);
+        /*
+          为了确保同一个用户名在同一时间只能有一个活跃的登录会话（即不允许重复登录）
+          使用 Redis Hash
+          Key: login_用户名
+          Value:
+           HashKey: token标识, 即下面的uuid
+           HashValue: JSON字符串, 即用户信息
+         */
+        //查询Redis中是否存在一个 key为"login_用户名"的记录
+        Boolean hasLogin = stringRedisTemplate.hasKey("login_" + requestParam.getUsername());
+        if (hasLogin) {
+            //如果存在，说明该用户已经登录过，不允许再次登录，抛出异常
+            throw new ClientException(UserErrorCodeEnum.USER_HAS_LOGIN);
+        }
+        //将用户信息存入 Redis Hash
+        String uuid = UUID.randomUUID().toString(); //生成一个唯一标识  ----uuid
+        stringRedisTemplate.opsForHash().put("login_" + requestParam.getUsername(), uuid, JSON.toJSONString(userDO));
+        //设置过期时间
+        stringRedisTemplate.expire("login_" + requestParam.getUsername(), 30L, TimeUnit.MINUTES);
         return new UserLoginRespDTO(uuid);
     }
 
     @Override
-    public Boolean checkLogin(String token) {
-        return stringRedisTemplate.hasKey(token);
+    public Boolean checkLogin(String username, String token) {
+        return stringRedisTemplate.opsForHash().get("login_" + username, token) != null;
     }
 }
