@@ -1,16 +1,21 @@
 package com.tenseed.shortlink.admin.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.tenseed.shortlink.admin.common.database.BaseDO;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.NoArgsConstructor;
 
 /**
  * 短链接分组实体
  */
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @TableName("t_group")
-public class GroupDO {
+public class GroupDO extends BaseDO {
 
     /**
      * id
@@ -36,19 +41,4 @@ public class GroupDO {
      * 分组排序序号
      */
     private Integer sortOrder;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 修改时间
-     */
-    private LocalDateTime updateTime;
-
-    /**
-     * 删除标识 0：未删除 1：已删除
-     */
-    private Boolean delFlag;
 }
