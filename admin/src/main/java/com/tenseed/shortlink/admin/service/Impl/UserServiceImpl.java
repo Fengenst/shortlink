@@ -55,30 +55,40 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     }
 
     @Override
-    public Boolean hasUsername(String username) {
+    public Boolean availableUsername(String username) {
+        // 使用布隆过滤器检查用户名是否存在
         return !userRegisterCachePenetrationBloomFilter.contains(username);
     }
 
     @Override
     public void register(UserRegisterReqDTO requestParam) {
-        if (!hasUsername(requestParam.getUsername())) {
+        // 检查用户名是否已存在（布隆过滤器判断）
+        if (!availableUsername(requestParam.getUsername())) {
             throw new ClientException(UserErrorCodeEnum.USER_NAME_EXIST);
         }
+
+        // 获取分布式锁，防止并发注册
         RLock lock = redissonClient.getLock(LOCK_USER_REGISTER_KEY + requestParam.getUsername());
         try {
+            // 使用tryLock而非lock，避免阻塞等待，实现快速失败
             if (lock.tryLock()) {
+                // 插入用户数据
                 int insert = baseMapper.insert(BeanUtil.toBean(requestParam, UserDO.class));
                 if (insert < 1) {
                     throw new ClientException(UserErrorCodeEnum.USER_SAVE_ERROR);
                 }
+                // 更新布隆过滤器
                 userRegisterCachePenetrationBloomFilter.add(requestParam.getUsername());
                 return;
             }
+            // 获取锁失败，说明可能有其他线程正在注册相同用户名
             throw new ClientException(UserErrorCodeEnum.USER_NAME_EXIST);
         } finally {
+            // 释放锁
             lock.unlock();
         }
     }
+
 
     @Override
     public void update(UserUpdateReqDTO requestParam) {
