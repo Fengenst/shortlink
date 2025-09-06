@@ -41,15 +41,15 @@ public class UserController {
     /**
      * 查询用户名是否可用（即判断用户名是否存在）
      */
-    @GetMapping("/api/shortlink/v1/user/has-username")
-    public Result<Boolean> hasUsername(@RequestParam("username") String username) {
-        return Results.success(userService.availableUsername(username));
+    @GetMapping("/api/shortlink/v1/user/is-username-available")
+    public Result<Boolean> isUsernameAvailable(@RequestParam("username") String username) {
+        return Results.success(userService.isUsernameAvailable(username));
     }
 
     /**
      * 用户注册
      */
-    @PostMapping("/api/shortlink/v1/user/register")
+    @PostMapping("/api/shortlink/v1/user")
     public Result<Void> register(@RequestBody UserRegisterReqDTO requestParam) {
         userService.register(requestParam);
         return Results.success();
@@ -58,7 +58,7 @@ public class UserController {
     /**
      * 用户信息修改
      */
-    @PutMapping("/api/shortlink/v1/user/update")
+    @PutMapping("/api/shortlink/v1/user")
     public Result<Void> update(@RequestBody UserUpdateReqDTO requestParam) {
         userService.update(requestParam);
         return Results.success();

@@ -55,7 +55,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     }
 
     @Override
-    public Boolean availableUsername(String username) {
+    public Boolean isUsernameAvailable(String username) {
         // 使用布隆过滤器检查用户名是否存在
         return !userRegisterCachePenetrationBloomFilter.contains(username);
     }
@@ -63,7 +63,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     @Override
     public void register(UserRegisterReqDTO requestParam) {
         // 检查用户名是否已存在（布隆过滤器判断）
-        if (!availableUsername(requestParam.getUsername())) {
+        if (!isUsernameAvailable(requestParam.getUsername())) {
             throw new ClientException(UserErrorCodeEnum.USER_NAME_EXIST);
         }
 
