@@ -2,6 +2,9 @@ package com.tenseed.shortlink.admin.dto.resp;
 
 import lombok.Data;
 
+/**
+ * 短链接分组返回参数
+ */
 @Data
 public class ShortLinkGroupRespDTO {
 
