@@ -3,6 +3,7 @@ package com.tenseed.shortlink.admin.controller;
 import com.tenseed.shortlink.admin.common.convention.result.Result;
 import com.tenseed.shortlink.admin.common.convention.result.Results;
 import com.tenseed.shortlink.admin.dto.req.ShortLinkGroupSaveReqDTO;
+import com.tenseed.shortlink.admin.dto.req.ShortLinkGroupSortReqDTO;
 import com.tenseed.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.tenseed.shortlink.admin.dto.resp.ShortLinkGroupRespDTO;
 import com.tenseed.shortlink.admin.service.GroupService;
@@ -52,6 +53,15 @@ public class GroupController {
     @DeleteMapping("/api/shortlink/v1/group")
     public Result<Void> deleteGroup(@RequestParam("gid") String gid) {
         groupService.deleteGroup(gid);
+        return Results.success();
+    }
+
+    /**
+     * 短链接分组排序（修改当前用户的短链接分组的sortOrder）
+     */
+    @PostMapping("/api/shortlink/v1/group/sort")
+    public Result<Void> sortGroup(@RequestBody List<ShortLinkGroupSortReqDTO> requestParam) {
+        groupService.sortGroup(requestParam);
         return Results.success();
     }
 }
