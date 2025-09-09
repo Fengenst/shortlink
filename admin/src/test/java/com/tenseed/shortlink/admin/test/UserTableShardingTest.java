@@ -1,4 +1,4 @@
-package com.tenseed.shortlink.test;
+package com.tenseed.shortlink.admin.test;
 
 public class UserTableShardingTest {
     public static final String SQL = "CREATE TABLE `t_user_%d` (\n" +
