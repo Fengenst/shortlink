@@ -2,7 +2,7 @@ package com.tenseed.shortlink.admin.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.tenseed.shortlink.admin.common.convention.result.Result;
-import com.tenseed.shortlink.admin.remote.dto.ShortLinkRemoteService;
+import com.tenseed.shortlink.admin.remote.ShortLinkRemoteService;
 import com.tenseed.shortlink.admin.remote.dto.req.ShortLinkCreateReqDTO;
 import com.tenseed.shortlink.admin.remote.dto.req.ShortLinkPageReqDTO;
 import com.tenseed.shortlink.admin.remote.dto.resp.ShortLinkCreateRespDTO;

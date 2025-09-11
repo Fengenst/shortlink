@@ -2,6 +2,7 @@ package com.tenseed.shortlink.project.service.Impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -11,6 +12,7 @@ import com.tenseed.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.tenseed.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
+import com.tenseed.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.tenseed.shortlink.project.service.ShortLinkService;
 import com.tenseed.shortlink.project.toolkit.HashUtil;
@@ -19,6 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBloomFilter;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * 短链接接口实现层
@@ -87,5 +92,20 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .orderByDesc(ShortLinkDO::getCreateTime);
         IPage<ShortLinkDO> resultPage = baseMapper.selectPage(requestParam, queryWrapper);
         return resultPage.convert(each -> BeanUtil.toBean(each, ShortLinkPageRespDTO.class));
+    }
+
+    @Override
+    public List<ShortLinkGroupCountQueryRespDTO> listGroupShortLinkCount(List<String> requestParam) {
+        // select gid as gid, count(*) as shortLinkCount from t_link_2 where enable_status = 0 and gid in () group by gid;
+        QueryWrapper<ShortLinkDO> queryWrapper = Wrappers.query(new ShortLinkDO())
+                .select("gid, count(*) as shortLinkCount")
+                .in("gid", requestParam)
+                .eq("enable_status", 0)
+                .groupBy("gid");
+        // 执行查询，将结果以Map列表的形式返回，每个Map代表一行数据
+        List<Map<String, Object>> shortLinkDOList = baseMapper.selectMaps(queryWrapper);
+        // 使用BeanUtil工具将 List<Map<String, Object>> 转换为 List<ShortLinkGroupCountQueryRespDTO> 并返回
+        // 这样可以将数据库查询结果映射到DTO对象中，便于接口返回
+        return BeanUtil.copyToList(shortLinkDOList, ShortLinkGroupCountQueryRespDTO.class);
     }
 }

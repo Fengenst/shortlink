@@ -6,13 +6,13 @@ import com.tenseed.shortlink.project.common.convention.result.Results;
 import com.tenseed.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
+import com.tenseed.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.tenseed.shortlink.project.service.ShortLinkService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 短链接控制层
@@ -38,5 +38,13 @@ public class ShortLinkController {
     @GetMapping("/api/shortlink/v1/page")
     public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkPageReqDTO requestParam) {
         return Results.success(shortLinkService.pageShortLink(requestParam));
+    }
+
+    /**
+     * 查询短链接分组内短链接数量
+     */
+    @GetMapping("/api/shortlink/v1/count")
+    public Result<List<ShortLinkGroupCountQueryRespDTO>> listGroupShortLinkCount(@RequestParam List<String> requestParam) {
+        return Results.success(shortLinkService.listGroupShortLinkCount(requestParam));
     }
 }
