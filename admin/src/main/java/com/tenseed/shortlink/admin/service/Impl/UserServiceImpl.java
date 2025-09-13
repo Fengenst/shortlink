@@ -15,6 +15,7 @@ import com.tenseed.shortlink.admin.dto.req.UserRegisterReqDTO;
 import com.tenseed.shortlink.admin.dto.req.UserUpdateReqDTO;
 import com.tenseed.shortlink.admin.dto.resp.UserLoginRespDTO;
 import com.tenseed.shortlink.admin.dto.resp.UserRespDTO;
+import com.tenseed.shortlink.admin.service.GroupService;
 import com.tenseed.shortlink.admin.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBloomFilter;
@@ -41,6 +42,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     private final RedissonClient redissonClient;
 
     private final StringRedisTemplate stringRedisTemplate;
+
+    private final GroupService groupService;
 
     @Override
     public UserRespDTO getUserByUsername(String username) {
@@ -84,6 +87,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
                 }
                 // 更新布隆过滤器
                 userRegisterCachePenetrationBloomFilter.add(requestParam.getUsername());
+                groupService.saveGroup(requestParam.getUsername(), "默认分组");
                 return;
             }
             // 获取锁失败，说明可能有其他线程正在注册相同用户名
