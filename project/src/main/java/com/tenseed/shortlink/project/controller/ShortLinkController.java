@@ -10,6 +10,8 @@ import com.tenseed.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.tenseed.shortlink.project.service.ShortLinkService;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -56,5 +58,10 @@ public class ShortLinkController {
     @GetMapping("/api/shortlink/v1/count")
     public Result<List<ShortLinkGroupCountQueryRespDTO>> listGroupShortLinkCount(@RequestParam List<String> requestParam) {
         return Results.success(shortLinkService.listGroupShortLinkCount(requestParam));
+    }
+
+    @GetMapping("/{short-uri}")
+    public void restoreUrl(@PathVariable("short-uri") String shortUri, ServletRequest request, ServletResponse response) {
+        shortLinkService.restoreUrl(shortUri, request, response);
     }
 }
