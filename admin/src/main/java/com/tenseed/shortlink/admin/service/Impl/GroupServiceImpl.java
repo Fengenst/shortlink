@@ -3,6 +3,7 @@ package com.tenseed.shortlink.admin.service.Impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tenseed.shortlink.admin.common.biz.user.UserContext;
@@ -19,9 +20,8 @@ import com.tenseed.shortlink.admin.toolkit.RandomGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 短链接分组接口实现层
@@ -71,47 +71,48 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
 
     @Override
     public List<ShortLinkGroupRespDTO> listGroup() {
-        // 构建查询条件
+        // 1. 构建查询条件：查询当前用户未删除的分组，按排序字段和创建时间倒序排列
         LambdaQueryWrapper<GroupDO> queryWrapper = Wrappers.lambdaQuery(GroupDO.class)
-                .eq(GroupDO::getDelFlag, 0)
                 .eq(GroupDO::getUsername, UserContext.getUsername())
-                // 原来是 .orderByDesc(GroupDO::getSortOrder, GroupDO::getUpdateTime)
-                // 改成 .orderByDesc(List.of(GroupDO::getSortOrder, GroupDO::getUpdateTime)) 就不会报警告了
-                .orderByDesc(List.of(GroupDO::getSortOrder, GroupDO::getUpdateTime));
-
-        // 先查到满足queryWrapper条件的GroupDO短链接分组集合，也就是当前用户创建的短链接分组
+                .eq(GroupDO::getDelFlag, 0)
+                .orderByDesc(List.of(GroupDO::getSortOrder, GroupDO::getCreateTime));
         List<GroupDO> groupDOList = baseMapper.selectList(queryWrapper);
 
-        // 根据该用户创建的短链接分组集合（即groupDOList），进而获取每个分组的gid
-        // 然后根据 gid集合 调用 shortLinkRemoteService.listGroupShortLinkCount() 查询出每个分组的短链接数量
-        // 最后封装为 Result<List<ShortLinkGroupCountQueryRespDTO>>
-        Result<List<ShortLinkGroupCountQueryRespDTO>> listResult = shortLinkRemoteService
-                .listGroupShortLinkCount(groupDOList.stream() // 将 List<GroupDO> 对象转化为 Stream<GroupDO> 对象
-                        // .map()方法会把流中的每个元素（一个 GroupDO 对象）映射成另外一种类型
-                        // 把 Stream<GroupDO> 转换成 Stream<String> 即 Stream 流中的元素就从 GroupDO 对象 变成了 gid 字符串
-                        .map(GroupDO::getGid)
-                        .toList()); // 把流 Stream<String> 收集为一个 List<String>
+        // 2. 如果没有查询到分组，直接返回空列表
+        if (CollectionUtils.isEmpty(groupDOList)) {
+            return Collections.emptyList();
+        }
 
-        // 将当前用户创建的短链接分组集合从 List<GroupDO> 转换为 List<ShortLinkGroupRespDTO>
+        // 3. 提取分组ID列表，用于后续查询每个分组中的短链接数量
+        List<String> gidList = groupDOList
+                .stream()
+                .map(GroupDO::getGid)
+                .filter(Objects::nonNull)
+                .toList();
+
+        // 4. 远程调用获取每个分组中的短链接数量
+        Result<List<ShortLinkGroupCountQueryRespDTO>> remoteResult = shortLinkRemoteService.listGroupShortLinkCount(gidList);
+        List<ShortLinkGroupCountQueryRespDTO> shortlinkCounts = (remoteResult == null || remoteResult.getData() == null)
+                ? Collections.emptyList()
+                : remoteResult.getData();
+
+        // 5. 构建分组ID与短链接数量的映射关系，处理可能的空值情况
+        Map<String, Integer> counts = shortlinkCounts
+                .stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(
+                        ShortLinkGroupCountQueryRespDTO::getGid,
+                        dto -> Optional.ofNullable(dto.getShortLinkCount()).orElse(0),
+                        (existing, replacement) -> existing // 遇到重复 key 时保留第一个（也可改为 Integer::sum）
+                ));
+
+        // 6. 将分组DO对象转换为返回DTO对象，并设置每个分组的短链接数量
         List<ShortLinkGroupRespDTO> shortLinkGroupRespDTOList = BeanUtil.copyToList(groupDOList, ShortLinkGroupRespDTO.class);
-
-        // 接下来处理 shortLinkGroupRespDTOList
-        // forEach 遍历列表中的每一个 ShortLinkGroupRespDTO，这里用 each 表示当前正在处理的分组 DTO
-        shortLinkGroupRespDTOList.forEach(each -> {
-            // listResult 是根据 gid 查询出来的各个短链接分组的数量，由于一个用户可以创建多个短链接分组，因而需要找到每一个分组下的短链接数量
-            // 所以就需要像现在这个代码一样进行遍历，相当于进行两层的for循环，匹配条件为gid相同，因为一个用户创建的多个短链接分组的gid不会重复，所以取第一个即可
-            // listResult.getData() 是为了获取 List<ShortLinkGroupCountQueryRespDTO>
-            // first就是每一个短链接分组对应的分组数量信息
-            Optional<ShortLinkGroupCountQueryRespDTO> first = listResult.getData()
-                    .stream()
-                    .filter(item -> Objects.equals(item.getGid(), each.getGid()))
-                    .findFirst();
-            // 若first不为空，那么就执行接下来的代码，为每个短链接分组的shortLinkCount赋值
-            first.ifPresent(item -> each.setShortLinkCount(item.getShortLinkCount()));
-        });
+        shortLinkGroupRespDTOList.forEach(g -> g.setShortLinkCount(counts.getOrDefault(g.getGid(), 0)));
 
         return shortLinkGroupRespDTOList;
     }
+
 
     @Override
     public void updateGroup(ShortLinkGroupUpdateReqDTO requestParam) {
