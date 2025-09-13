@@ -5,6 +5,7 @@ import com.tenseed.shortlink.project.common.convention.result.Result;
 import com.tenseed.shortlink.project.common.convention.result.Results;
 import com.tenseed.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkPageReqDTO;
+import com.tenseed.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkPageRespDTO;
@@ -30,6 +31,15 @@ public class ShortLinkController {
     public Result<ShortLinkCreateRespDTO> createShortLink(@RequestBody ShortLinkCreateReqDTO requestParam) {
         ShortLinkCreateRespDTO shortLinkCreateRespDTO = shortLinkService.createShortLink(requestParam);
         return Results.success(shortLinkCreateRespDTO);
+    }
+
+    /**
+     * 短链接修改
+     */
+    @PostMapping("/api/shortlink/v1/update")
+    public Result<Void> updateShortLink(@RequestBody ShortLinkUpdateReqDTO requestParam) {
+        shortLinkService.updateShortLink(requestParam);
+        return Results.success();
     }
 
     /**

@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.tenseed.shortlink.admin.common.convention.result.Result;
 import com.tenseed.shortlink.admin.remote.dto.req.ShortLinkCreateReqDTO;
 import com.tenseed.shortlink.admin.remote.dto.req.ShortLinkPageReqDTO;
+import com.tenseed.shortlink.admin.remote.dto.req.ShortLinkUpdateReqDTO;
 import com.tenseed.shortlink.admin.remote.dto.resp.ShortLinkCreateRespDTO;
 import com.tenseed.shortlink.admin.remote.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.tenseed.shortlink.admin.remote.dto.resp.ShortLinkPageRespDTO;
@@ -29,6 +30,15 @@ public interface ShortLinkRemoteService {
         String resultBodyStr = HttpUtil.post("http://127.0.0.1:8004/api/shortlink/v1/create", JSON.toJSONString(requestParam));
         return JSON.parseObject(resultBodyStr, new TypeReference<>() {
         });
+    }
+
+    /**
+     * 修改短链接
+     *
+     * @param requestParam 修改短链接请求参数
+     */
+    default void updateShortLink(ShortLinkUpdateReqDTO requestParam) {
+        HttpUtil.post("http://127.0.0.1:8004/api/shortlink/v1/update", JSON.toJSONString(requestParam));
     }
 
     /**
