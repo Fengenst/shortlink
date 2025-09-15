@@ -43,7 +43,7 @@ public interface ShortLinkService extends IService<ShortLinkDO> {
     List<ShortLinkGroupCountQueryRespDTO> listGroupShortLinkCount(List<String> requestParam);
 
     /**
-     * 修改短链接
+     * 修改短链接 根据完整短链接和分组标识
      *
      * @param requestParam 修改短链接请求参数
      */

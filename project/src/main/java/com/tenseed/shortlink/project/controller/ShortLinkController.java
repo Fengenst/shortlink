@@ -36,7 +36,7 @@ public class ShortLinkController {
     }
 
     /**
-     * 短链接修改
+     * 短链接修改  根据完整短链接和分组标识
      */
     @PostMapping("/api/shortlink/v1/update")
     public Result<Void> updateShortLink(@RequestBody ShortLinkUpdateReqDTO requestParam) {
