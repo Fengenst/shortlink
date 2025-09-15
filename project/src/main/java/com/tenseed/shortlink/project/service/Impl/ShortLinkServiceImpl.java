@@ -93,9 +93,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .build();
 
         try {
+            // 插入主表 & 路由表
             baseMapper.insert(shortLinkDO);
             shortLinkGotoMapper.insert(shortLinkGotoDO);
         } catch (DuplicateKeyException ex) {
+            // 唯一约束冲突 → 说明短链已存在（可能是并发下生成重复）
             LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                     .eq(ShortLinkDO::getFullShortUrl, fullShortUrl);
             ShortLinkDO availableShortLinkDO = baseMapper.selectOne(queryWrapper);
@@ -104,7 +106,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 throw new ServiceException("短链接生成重复");
             }
         }
-        // 短链接创建时进行缓存预热
+        // 短链接创建时进行缓存预热，避免首次访问时缓存未命中导致查库
         stringRedisTemplate.opsForValue().set(
                 String.format(GOTO_SHORT_LINK_KEY, fullShortUrl),
                 requestParam.getOriginUrl(),
@@ -161,6 +163,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             baseMapper.delete(updateWrapper);
             baseMapper.insert(shortLinkDO);
         }
+
+        // 更新数据库后，删除 Redis 缓存，处理缓存一致性
+        String fullShortUrl = requestParam.getFullShortUrl();
+        stringRedisTemplate.delete(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
+        stringRedisTemplate.delete(String.format(GOTO_NULL_SHORT_LINK_KEY, fullShortUrl));
     }
 
     @SneakyThrows
@@ -176,21 +183,25 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             ((HttpServletResponse) response).sendRedirect(originalLink);
             return; // 缓存命中，流程结束
         }
+
+        // 3.使用布隆过滤器拦截非法短链（防止缓存穿透）
         boolean contains = shortUriCreateCachePenetrationBloomFilter.contains(fullShortUrl);
         if (!contains) {
             return;
         }
+
+        // 4.检查 null 缓存（防止无效短链频繁访问 DB）
         String gotoNullShortLink = stringRedisTemplate.opsForValue().get(String.format(GOTO_NULL_SHORT_LINK_KEY, fullShortUrl));
         if (StrUtil.isNotBlank(gotoNullShortLink)) {
             return;
         }
 
-        // 3️.缓存未命中 → 为防止缓存击穿，使用 Redisson 分布式锁串行化“查库+回填”操作
+        // 5.缓存未命中 → 为防止缓存击穿，使用 Redisson 分布式锁串行化“查库+回填”操作
         RLock lock = redissonClient.getLock(String.format(LOCK_GOTO_SHORT_LINK_KEY, fullShortUrl));
         lock.lock(); // 阻塞直到获取锁（建议生产环境设置超时，如 lock.lock(30, TimeUnit.SECONDS)）
 
         try {
-            // 4️.第二次检查：双重检查锁定（Double-Checked Locking）
+            // 6.第二次检查：双重检查锁定（Double-Checked Locking）
             // 加锁后再次检查缓存 —— 因为在等待锁的过程中，可能其他线程已查库并回填缓存
             // 若此时缓存已存在，直接跳转，避免重复查库（节省 DB 资源，提升并发效率）
             originalLink = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
@@ -199,18 +210,18 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 return;
             }
 
-            // 5️.缓存仍无 → 查询“路由表”定位数据（支持分表架构）
+            // 7.缓存仍无 → 查询“路由表”定位数据（支持分表架构）
             LambdaQueryWrapper<ShortLinkGotoDO> LinkGotoQueryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                     .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
             ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(LinkGotoQueryWrapper);
 
-            // 6️.路由记录不存在 → 短链非法或已删除，直接返回（可扩展风控逻辑，如记录攻击行为）
+            // 8.路由记录不存在 → 短链非法或已删除，直接返回（可扩展风控逻辑，如记录攻击行为）
             if (shortLinkGotoDO == null) {
                 stringRedisTemplate.opsForValue().set(String.format(GOTO_NULL_SHORT_LINK_KEY, fullShortUrl), "-", 30, TimeUnit.MINUTES);
                 return;
             }
 
-            // 7️.根据路由信息（gid）+ 完整短链，查询主表，同时校验“未删除”和“已启用”状态
+            // 9.根据路由信息（gid）+ 完整短链，查询主表，同时校验“未删除”和“已启用”状态
             LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                     .eq(ShortLinkDO::getGid, shortLinkGotoDO.getGid())      // 分组ID，用于分表/业务隔离
                     .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)         // 完整短链
@@ -219,14 +230,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
             ShortLinkDO shortLinkDO = baseMapper.selectOne(queryWrapper);
 
-            // 8️.查询成功 → 回填 Redis 缓存 + 执行跳转
+            // 10.查询成功 → 检验有效期 + 回填 Redis 缓存 + 执行跳转
             if (shortLinkDO != null) {
-                // 生产建议：设置缓存过期时间，避免长期驻留或脏数据，如：
-                // stringRedisTemplate.opsForValue().set(key, value, 2, TimeUnit.HOURS);
+                // 有效期已过 → 视为无效，写入 null 缓存
                 if (shortLinkDO.getValidDate() != null && shortLinkDO.getValidDate().before(new Date())) {
                     stringRedisTemplate.opsForValue().set(String.format(GOTO_NULL_SHORT_LINK_KEY, fullShortUrl), "-", 30, TimeUnit.MINUTES);
                     return;
                 }
+                // 有效 → 写入 Redis 缓存，设置过期时间，避免长期脏数据
                 stringRedisTemplate.opsForValue().set(
                         String.format(GOTO_SHORT_LINK_KEY, fullShortUrl),
                         shortLinkDO.getOriginUrl(),
@@ -236,7 +247,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 ((HttpServletResponse) response).sendRedirect(shortLinkDO.getOriginUrl());
             }
 
-            // 9️.若主表也无有效数据 → 说明短链已失效，静默返回（也可跳转 404 页面）
+            // 11.若主表也无有效数据 → 说明短链已失效，静默返回（也可跳转 404 页面）
             // 此处未处理，保持静默（符合当前逻辑）
 
         } finally {
