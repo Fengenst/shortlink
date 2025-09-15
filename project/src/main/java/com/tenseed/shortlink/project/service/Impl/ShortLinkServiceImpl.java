@@ -40,9 +40,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
-import static com.tenseed.shortlink.project.common.constant.RedisKeyConstant.GOTO_SHORT_LINK_KEY;
-import static com.tenseed.shortlink.project.common.constant.RedisKeyConstant.LOCK_GOTO_SHORT_LINK_KEY;
+import static com.tenseed.shortlink.project.common.constant.RedisKeyConstant.*;
 
 /**
  * 短链接接口实现层
@@ -169,6 +169,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             ((HttpServletResponse) response).sendRedirect(originalLink);
             return; // 缓存命中，流程结束
         }
+        boolean contains = shortUriCreateCachePenetrationBloomFilter.contains(fullShortUrl);
+        if (!contains) {
+            return;
+        }
+        String gotoNullShortLink = stringRedisTemplate.opsForValue().get(String.format(GOTO_NULL_SHORT_LINK_KEY, fullShortUrl));
+        if (StrUtil.isNotBlank(gotoNullShortLink)) {
+            return;
+        }
 
         // 3️.缓存未命中 → 为防止缓存击穿，使用 Redisson 分布式锁串行化“查库+回填”操作
         RLock lock = redissonClient.getLock(String.format(LOCK_GOTO_SHORT_LINK_KEY, fullShortUrl));
@@ -191,7 +199,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
             // 6️.路由记录不存在 → 短链非法或已删除，直接返回（可扩展风控逻辑，如记录攻击行为）
             if (shortLinkGotoDO == null) {
-                // 严谨来说此处需进行风控
+                stringRedisTemplate.opsForValue().set(String.format(GOTO_NULL_SHORT_LINK_KEY, fullShortUrl), "-", 30, TimeUnit.MINUTES);
                 return;
             }
 
