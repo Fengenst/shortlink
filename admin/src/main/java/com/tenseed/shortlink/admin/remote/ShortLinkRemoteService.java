@@ -11,6 +11,7 @@ import com.tenseed.shortlink.admin.remote.dto.req.ShortLinkUpdateReqDTO;
 import com.tenseed.shortlink.admin.remote.dto.resp.ShortLinkCreateRespDTO;
 import com.tenseed.shortlink.admin.remote.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.tenseed.shortlink.admin.remote.dto.resp.ShortLinkPageRespDTO;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.HashMap;
 import java.util.List;
@@ -71,4 +72,16 @@ public interface ShortLinkRemoteService {
         });
     }
 
+
+    /**
+     * 根据 URL 获取标题
+     *
+     * @param url 目标网站地址
+     * @return 网站标题
+     */
+    default Result<String> getTitleByUrl(@RequestParam("url") String url) {
+        String resultStr = HttpUtil.get("http://127.0.0.1:8004/api/shortlink/v1/title?url=" + url);
+        return JSON.parseObject(resultStr, new TypeReference<>() {
+        });
+    }
 }
