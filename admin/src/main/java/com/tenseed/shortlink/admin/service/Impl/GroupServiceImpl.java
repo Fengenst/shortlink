@@ -38,28 +38,34 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
      * 判断GID是否可用
      *
      * @param gid 分组表示
-     * @return gid存在返回true，不存在返回false
+     * @return gid 存在返回 true，不存在返回 false
      */
     public boolean availableGid(String username, String gid) {
+        // 构造查询条件：根据 gid 和用户名查询分组
         LambdaQueryWrapper<GroupDO> queryWrapper = Wrappers.lambdaQuery(GroupDO.class)
                 .eq(GroupDO::getGid, gid)
+                // 如果 username 参数不为空则使用该用户名，否则从用户上下文获取当前登录用户名
                 .eq(GroupDO::getUsername, Optional.ofNullable(username).orElse(UserContext.getUsername()));
         GroupDO groupDO = baseMapper.selectOne(queryWrapper);
+        // 如果查询到结果说明 gid 已存在，返回 true；否则返回 false
         return groupDO != null;
     }
 
     @Override
     public void saveGroup(String groupName) {
+        // 使用当前登录用户创建分组
         saveGroup(UserContext.getUsername(), groupName);
     }
 
     @Override
     public void saveGroup(String username, String groupName) {
         String gid;
+        // 循环生成唯一GID，直到找到未被使用的GID
         do {
             gid = RandomGenerator.generateSixAlphaNumber();
         } while (availableGid(username, gid));
 
+        // 构建分组对象并保存到数据库
         GroupDO groupDO = GroupDO.builder()
                 .gid(gid)
                 .name(groupName)
@@ -68,6 +74,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
                 .build();
         baseMapper.insert(groupDO);
     }
+
 
     @Override
     public List<ShortLinkGroupRespDTO> listGroup() {
@@ -116,39 +123,56 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
 
     @Override
     public void updateGroup(ShortLinkGroupUpdateReqDTO requestParam) {
+        // 构造更新条件：根据当前用户、分组ID和未删除状态进行更新
         LambdaUpdateWrapper<GroupDO> updateWrapper = Wrappers.lambdaUpdate(GroupDO.class)
                 .eq(GroupDO::getUsername, UserContext.getUsername())
                 .eq(GroupDO::getGid, requestParam.getGid())
                 .eq(GroupDO::getDelFlag, 0);
+
+        // 构建更新对象，只更新分组名称
         GroupDO groupDO = GroupDO.builder()
-                .name(requestParam.getName())
+                .name(requestParam.getName())  // 新的分组名称
                 .build();
+
+        // 执行更新操作
         baseMapper.update(groupDO, updateWrapper);
     }
 
+
     @Override
     public void deleteGroup(String gid) {
+        // 构造更新条件：根据当前用户、分组ID和未删除状态进行更新
         LambdaUpdateWrapper<GroupDO> updateWrapper = Wrappers.lambdaUpdate(GroupDO.class)
                 .eq(GroupDO::getUsername, UserContext.getUsername())
                 .eq(GroupDO::getGid, gid)
                 .eq(GroupDO::getDelFlag, 0);
+
+        // 逻辑删除：设置删除标识为1，不实际删除数据
         GroupDO groupDO = new GroupDO();
-        groupDO.setDelFlag(1);
+        groupDO.setDelFlag(1);  // 标记为已删除
+
+        // 执行更新操作
         baseMapper.update(groupDO, updateWrapper);
     }
 
     @Override
     public void sortGroup(List<ShortLinkGroupSortReqDTO> requestParam) {
+        // 遍历排序参数列表，逐个更新分组的排序值
         requestParam.forEach(each -> {
+            // 构造更新条件：根据当前用户、分组ID和未删除状态进行更新
             LambdaUpdateWrapper<GroupDO> updateWrapper = Wrappers.lambdaUpdate(GroupDO.class)
                     .eq(GroupDO::getUsername, UserContext.getUsername())
                     .eq(GroupDO::getGid, each.getGid())
                     .eq(GroupDO::getDelFlag, 0);
 
+            // 构建更新对象，只更新排序字段
             GroupDO groupDO = GroupDO.builder()
-                    .sortOrder(each.getSortOrder())
+                    .sortOrder(each.getSortOrder())  // 新的排序值
                     .build();
+
+            // 执行更新操作
             baseMapper.update(groupDO, updateWrapper);
         });
     }
+
 }

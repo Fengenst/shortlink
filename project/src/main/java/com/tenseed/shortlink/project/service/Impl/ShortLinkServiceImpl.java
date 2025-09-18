@@ -74,12 +74,16 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         int customGenerateCount = 0;
         String shortUri;
         while (true) {
+            // 限制生成次数，防止无限循环
             if (customGenerateCount > 10) {
                 throw new ServiceException("短链接频繁生成，请稍后再试");
             }
+            // 添加时间戳确保每次生成输入不同
             String originUrl = requestParam.getOriginUrl();
             originUrl += System.currentTimeMillis();
+            // 哈希转换为Base62编码
             shortUri = HashUtil.hashToBase62(originUrl);
+            // 检查布隆过滤器避免重复
             if (!shortUriCreateCachePenetrationBloomFilter.contains(requestParam.getDomain() + "/" + shortUri)) {
                 break;
             }
@@ -87,6 +91,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }
         return shortUri;
     }
+
 
     /**
      * 获取网站的 favicon 图标链接
@@ -96,33 +101,47 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      */
     @SneakyThrows
     private String getFavicon(String url) {
+        // 建立 HTTP 连接验证网站可访问性
         URL targetUrl = new URL(url);
         HttpURLConnection connection = (HttpURLConnection) targetUrl.openConnection();
         connection.setRequestMethod("GET");
         connection.connect();
         int responseCode = connection.getResponseCode();
+
+        // 网站访问正常时解析 HTML 获取 favicon
         if (HttpURLConnection.HTTP_OK == responseCode) {
+            // 使用 Jsoup 解析网站 HTML 文档
             Document document = Jsoup.connect(url).get();
+            // 在 HTML 文档中查找 favicon 图标链接
+            // cssQuery：查找 <link> 标签，rel属性值匹配 ^(shortcut )?icon 正则表达式
+            // 可以匹配 "icon"、"shortcut icon" 等常见的 favicon 声明方式
             Element faviconLink = document.select("link[rel~=(?i)^(shortcut )?icon]").first();
+            // 如果找到了 favicon 链接，则返回其绝对URL地址
             if (faviconLink != null) {
+                // attr("abs:href") 获取 href 属性的绝对 URL（自动补全域名）
                 return faviconLink.attr("abs:href");
             }
         }
-
+        // 如果任何步骤失败或未找到 favicon，返回 null
         return null;
     }
 
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
+        // 生成短链接后缀
         String shortLinkSuffix = generateSuffix(requestParam);
+        // 构造完整短链接
         String fullShortUrl = requestParam.getDomain() + "/" + shortLinkSuffix;
 
+        // 构建短链接实体对象
         ShortLinkDO shortLinkDO = BeanUtil.toBean(requestParam, ShortLinkDO.class);
         shortLinkDO.setShortUri(shortLinkSuffix);
-        shortLinkDO.setEnableStatus(0);
+        shortLinkDO.setEnableStatus(0); // 设置启用状态
         shortLinkDO.setFullShortUrl(fullShortUrl);
+        // 获取目标网站favicon图标
         shortLinkDO.setFavicon(getFavicon(requestParam.getOriginUrl()));
 
+        // 构建短链接路由实体对象
         ShortLinkGotoDO shortLinkGotoDO = ShortLinkGotoDO.builder()
                 .fullShortUrl(fullShortUrl)
                 .gid(requestParam.getGid())
@@ -148,7 +167,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 requestParam.getOriginUrl(),
                 LinkUtil.getLinkCacheValidTime(requestParam.getValidDate()), TimeUnit.MILLISECONDS
         );
+        // 将短链接添加到布隆过滤器中
         shortUriCreateCachePenetrationBloomFilter.add(fullShortUrl);
+        // 构建并返回响应结果
         return ShortLinkCreateRespDTO.builder()
                 .fullShortUrl("http://" + shortLinkDO.getFullShortUrl())
                 .originUrl(requestParam.getOriginUrl())
@@ -156,9 +177,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .build();
     }
 
+
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void updateShortLink(ShortLinkUpdateReqDTO requestParam) {
+        // 查询已存在的短链接记录
         LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                 .eq(ShortLinkDO::getGid, requestParam.getGid())
                 .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
@@ -168,6 +191,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         if (existedShortLinkDO == null) {
             throw new ClientException("短链接记录不存在");
         }
+
+        // 构建新的短链接对象，保留原有统计信息
         ShortLinkDO shortLinkDO = ShortLinkDO.builder()
                 .domain(existedShortLinkDO.getDomain())
                 .shortUri(existedShortLinkDO.getShortUri())
@@ -180,7 +205,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .validDateType(requestParam.getValidDateType())
                 .validDate(requestParam.getValidDate())
                 .build();
+
+        // 判断分组是否发生变化
         if (Objects.equals(existedShortLinkDO.getGid(), requestParam.getGid())) {
+            // 分组未变化，直接更新记录
             LambdaUpdateWrapper<ShortLinkDO> updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
                     .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
                     .eq(ShortLinkDO::getGid, requestParam.getGid())
@@ -191,6 +219,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                             , ShortLinkDO::getValidDate, null);
             baseMapper.update(shortLinkDO, updateWrapper);
         } else {
+            // 分组发生变化，先删除原记录再插入新记录
             LambdaUpdateWrapper<ShortLinkDO> updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
                     .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
                     .eq(ShortLinkDO::getGid, existedShortLinkDO.getGid())
@@ -205,6 +234,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         stringRedisTemplate.delete(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
         stringRedisTemplate.delete(String.format(GOTO_NULL_SHORT_LINK_KEY, fullShortUrl));
     }
+
 
     @SneakyThrows
     @Override
@@ -298,18 +328,23 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     @Override
     public IPage<ShortLinkPageRespDTO> pageShortLink(ShortLinkPageReqDTO requestParam) {
+        // 构造查询条件：根据分组 ID 查询未删除的启用短链接，按创建时间倒序排列
         LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                 .eq(ShortLinkDO::getGid, requestParam.getGid())
                 .eq(ShortLinkDO::getEnableStatus, 0)
                 .eq(ShortLinkDO::getDelFlag, 0)
                 .orderByDesc(ShortLinkDO::getCreateTime);
+
+        // 执行分页查询
         IPage<ShortLinkDO> resultPage = baseMapper.selectPage(requestParam, queryWrapper);
+        // 转换查询结果为响应 DTO，并添加 http 前缀
         return resultPage.convert(each -> {
             ShortLinkPageRespDTO result = BeanUtil.toBean(each, ShortLinkPageRespDTO.class);
-            result.setDomain("http://" + result.getDomain());
+            result.setDomain("http://" + result.getDomain());  // 补全域名前缀
             return result;
         });
     }
+
 
     @Override
     public List<ShortLinkGroupCountQueryRespDTO> listGroupShortLinkCount(List<String> requestParam) {

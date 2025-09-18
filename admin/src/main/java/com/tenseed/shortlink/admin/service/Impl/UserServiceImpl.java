@@ -47,12 +47,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
 
     @Override
     public UserRespDTO getUserByUsername(String username) {
+        // 根据用户名查询用户信息
         LambdaQueryWrapper<UserDO> queryWrapper = Wrappers.lambdaQuery(UserDO.class)
                 .eq(UserDO::getUsername, username);
         UserDO userDO = baseMapper.selectOne(queryWrapper);
+        // 如果用户不存在，抛出异常
         if (userDO == null) {
             throw new ClientException(UserErrorCodeEnum.USER_NULL);
         }
+        // 将用户DO对象转换为响应DTO对象
         UserRespDTO result = new UserRespDTO();
         BeanUtils.copyProperties(userDO, result);
         return result;
@@ -109,11 +112,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
 
     @Override
     public UserLoginRespDTO login(UserLoginReqDTO requestParam) {
+        // 构建查询条件，根据用户名、密码和未删除状态查询用户
         LambdaQueryWrapper<UserDO> queryWrapper = Wrappers.lambdaQuery(UserDO.class)
                 .eq(UserDO::getUsername, requestParam.getUsername())
                 .eq(UserDO::getPassword, requestParam.getPassword())
                 .eq(UserDO::getDelFlag, 0);
         UserDO userDO = baseMapper.selectOne(queryWrapper);
+        // 用户不存在或密码错误时抛出异常
         if (userDO == null) {
             throw new ClientException(UserErrorCodeEnum.USER_NULL);
         }
@@ -141,15 +146,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
 
     @Override
     public Boolean checkLogin(String username, String token) {
+        // 检查Redis中是否存在指定用户的登录token，验证用户是否已登录
         return stringRedisTemplate.opsForHash().get("login_" + username, token) != null;
     }
 
     @Override
     public void logout(String username, String token) {
+        // 验证用户是否已登录
         if (checkLogin(username, token)) {
+            // 删除用户的登录会话信息，实现登出
             stringRedisTemplate.delete("login_" + username);
             return;
         }
+        // token不存在或用户未登录时抛出异常
         throw new ClientException("用户token不存在或用户未登录");
     }
 }
