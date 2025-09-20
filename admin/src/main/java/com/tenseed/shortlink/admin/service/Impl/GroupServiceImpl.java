@@ -60,7 +60,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
     @Override
     public void saveGroup(String username, String groupName) {
         String gid;
-        // 循环生成唯一GID，直到找到未被使用的GID
+        // 循环生成唯一 GID，直到找到未被使用的 GID
         do {
             gid = RandomGenerator.generateSixAlphaNumber();
         } while (availableGid(username, gid));
@@ -90,7 +90,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
             return Collections.emptyList();
         }
 
-        // 3. 提取分组ID列表，用于后续查询每个分组中的短链接数量
+        // 3. 提取分组 ID 列表，用于后续查询每个分组中的短链接数量
         List<String> gidList = groupDOList
                 .stream()
                 .map(GroupDO::getGid)
@@ -103,7 +103,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
                 ? Collections.emptyList()
                 : remoteResult.getData();
 
-        // 5. 构建分组ID与短链接数量的映射关系，处理可能的空值情况
+        // 5. 构建分组 ID与短链接数量的映射关系，处理可能的空值情况
         Map<String, Integer> counts = shortlinkCounts
                 .stream()
                 .filter(Objects::nonNull)
@@ -113,7 +113,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
                         (existing, replacement) -> existing // 遇到重复 key 时保留第一个（也可改为 Integer::sum）
                 ));
 
-        // 6. 将分组DO对象转换为返回DTO对象，并设置每个分组的短链接数量
+        // 6. 将分组 DO 对象转换为返回 DTO 对象，并设置每个分组的短链接数量
         List<ShortLinkGroupRespDTO> shortLinkGroupRespDTOList = BeanUtil.copyToList(groupDOList, ShortLinkGroupRespDTO.class);
         shortLinkGroupRespDTOList.forEach(g -> g.setShortLinkCount(counts.getOrDefault(g.getGid(), 0)));
 
