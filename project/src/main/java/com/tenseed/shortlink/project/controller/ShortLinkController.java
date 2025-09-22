@@ -60,6 +60,9 @@ public class ShortLinkController {
         return Results.success(shortLinkService.listGroupShortLinkCount(requestParam));
     }
 
+    /**
+     * 短链接跳转
+     */
     @GetMapping("/{short-uri}")
     public void restoreUrl(@PathVariable("short-uri") String shortUri, ServletRequest request, ServletResponse response) {
         shortLinkService.restoreUrl(shortUri, request, response);
