@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tenseed.shortlink.project.dao.entity.ShortLinkDO;
 import com.tenseed.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.tenseed.shortlink.project.dto.req.RecycleBinSaveReqDTO;
-import com.tenseed.shortlink.project.dto.req.ShortLinkPageReqDTO;
+import com.tenseed.shortlink.project.dto.req.ShortLinkRecycleBinPageReqDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.tenseed.shortlink.project.service.RecycleBinService;
 import lombok.RequiredArgsConstructor;
@@ -46,13 +46,13 @@ public class RecycleBinServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLin
     }
 
     @Override
-    public IPage<ShortLinkPageRespDTO> pageRecycleBinShortLink(ShortLinkPageReqDTO requestParam) {
+    public IPage<ShortLinkPageRespDTO> pageRecycleBinShortLink(ShortLinkRecycleBinPageReqDTO requestParam) {
         // 构造查询条件：根据分组 ID 查询未删除的启用短链接，按创建时间倒序排列
         LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
-                .eq(ShortLinkDO::getGid, requestParam.getGid())
+                .in(ShortLinkDO::getGid, requestParam.getGidList())
                 .eq(ShortLinkDO::getEnableStatus, 1)
                 .eq(ShortLinkDO::getDelFlag, 0)
-                .orderByDesc(ShortLinkDO::getCreateTime);
+                .orderByDesc(ShortLinkDO::getUpdateTime);
 
         // 执行分页查询
         IPage<ShortLinkDO> resultPage = baseMapper.selectPage(requestParam, queryWrapper);
