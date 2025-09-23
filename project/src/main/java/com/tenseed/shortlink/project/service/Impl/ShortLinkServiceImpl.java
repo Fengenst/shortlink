@@ -139,7 +139,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         shortLinkDO.setEnableStatus(0); // 设置启用状态
         shortLinkDO.setFullShortUrl(fullShortUrl);
         // 获取目标网站favicon图标
-        shortLinkDO.setFavicon(getFavicon(requestParam.getOriginUrl()));
+        // shortLinkDO.setFavicon(getFavicon(requestParam.getOriginUrl()));
 
         // 构建短链接路由实体对象
         ShortLinkGotoDO shortLinkGotoDO = ShortLinkGotoDO.builder()
@@ -300,22 +300,19 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             ShortLinkDO shortLinkDO = baseMapper.selectOne(queryWrapper);
 
             // 10.查询成功 → 检验有效期 + 回填 Redis 缓存 + 执行跳转
-            if (shortLinkDO != null) {
+            if (shortLinkDO == null || shortLinkDO.getValidDate().before(new Date())) {
                 // 有效期已过 → 视为无效，写入 null 缓存
-                if (shortLinkDO.getValidDate() != null && shortLinkDO.getValidDate().before(new Date())) {
-                    stringRedisTemplate.opsForValue().set(String.format(GOTO_NULL_SHORT_LINK_KEY, fullShortUrl), "-", 30, TimeUnit.MINUTES);
-                    ((HttpServletResponse) response).sendRedirect("/page/notfound");
-                    return;
-                }
-                // 有效 → 写入 Redis 缓存，设置过期时间，避免长期脏数据
-                stringRedisTemplate.opsForValue().set(
-                        String.format(GOTO_SHORT_LINK_KEY, fullShortUrl),
-                        shortLinkDO.getOriginUrl(),
-                        LinkUtil.getLinkCacheValidTime(shortLinkDO.getValidDate()), TimeUnit.MILLISECONDS
-                );
-
-                ((HttpServletResponse) response).sendRedirect(shortLinkDO.getOriginUrl());
+                stringRedisTemplate.opsForValue().set(String.format(GOTO_NULL_SHORT_LINK_KEY, fullShortUrl), "-", 30, TimeUnit.MINUTES);
+                ((HttpServletResponse) response).sendRedirect("/page/notfound");
+                return;
             }
+            // 有效 → 写入 Redis 缓存，设置过期时间，避免长期脏数据
+            stringRedisTemplate.opsForValue().set(
+                    String.format(GOTO_SHORT_LINK_KEY, fullShortUrl),
+                    shortLinkDO.getOriginUrl(),
+                    LinkUtil.getLinkCacheValidTime(shortLinkDO.getValidDate()), TimeUnit.MILLISECONDS
+            );
+            ((HttpServletResponse) response).sendRedirect(shortLinkDO.getOriginUrl());
 
             // 11.若主表也无有效数据 → 说明短链已失效，静默返回（也可跳转 404 页面）
             // 此处未处理，保持静默（符合当前逻辑）
