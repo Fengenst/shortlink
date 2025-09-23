@@ -300,7 +300,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             ShortLinkDO shortLinkDO = baseMapper.selectOne(queryWrapper);
 
             // 10.查询成功 → 检验有效期 + 回填 Redis 缓存 + 执行跳转
-            if (shortLinkDO == null || shortLinkDO.getValidDate().before(new Date())) {
+            if (shortLinkDO == null || (shortLinkDO.getValidDate() != null && shortLinkDO.getValidDate().before(new Date()))) {
                 // 有效期已过 → 视为无效，写入 null 缓存
                 stringRedisTemplate.opsForValue().set(String.format(GOTO_NULL_SHORT_LINK_KEY, fullShortUrl), "-", 30, TimeUnit.MINUTES);
                 ((HttpServletResponse) response).sendRedirect("/page/notfound");
