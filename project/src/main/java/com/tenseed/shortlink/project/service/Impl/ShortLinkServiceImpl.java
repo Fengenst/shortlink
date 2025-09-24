@@ -160,18 +160,17 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .findFirst()
                         .map(Cookie::getValue)
                         .ifPresentOrElse(each -> {
-                            Long added = stringRedisTemplate.opsForSet().add("short-link:stats:uv" + fullShortUrl, each);
-                            uvFirstFlag.set(added != null && added > 0L);
+                            Long uvAdded = stringRedisTemplate.opsForSet().add("short-link:stats:uv" + fullShortUrl, each);
+                            uvFirstFlag.set(uvAdded != null && uvAdded > 0L);
                         }, addResponseCookieTask);
             } else {
                 addResponseCookieTask.run();
             }
-            // 获得当前日期
-            Date date = new Date();
-            // 获得当前日期是本周的星期几
-            Week week = DateUtil.dayOfWeekEnum(date);
-            // 获得当前时间是当天的第几个小时
-            int hour = DateUtil.hour(date, true);
+
+            String remoteAddr = LinkUtil.getActualIp(((HttpServletRequest) request));
+            Long uipAdded = stringRedisTemplate.opsForSet().add("short-link:stats:uip" + fullShortUrl, remoteAddr);
+            boolean uipFirstFlag = uipAdded != null && uipAdded > 0L;
+
             // 假如 gid 是 null，那么通过短链接跳转表查到当前 fullShortUrl 对应的 gid
             if (StrUtil.isBlank(gid)) {
                 LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
@@ -180,13 +179,20 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 gid = shortLinkGotoDO.getGid();
 
             }
+
+            // 获得当前日期
+            Date date = new Date();
+            // 获得当前日期是本周的星期几
+            Week week = DateUtil.dayOfWeekEnum(date);
+            // 获得当前时间是当天的第几个小时
+            int hour = DateUtil.hour(date, true);
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
                     .fullShortUrl(fullShortUrl)
                     .gid(gid)
                     .date(LocalDate.now())
                     .pv(1)
                     .uv(uvFirstFlag.get() ? 1 : 0)
-                    .uip(1)
+                    .uip(uipFirstFlag ? 1 : 0)
                     .hour(hour)
                     .weekday(week.getIso8601Value())
                     .build();
