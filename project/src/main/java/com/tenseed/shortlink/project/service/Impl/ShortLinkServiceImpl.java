@@ -1,6 +1,8 @@
 package com.tenseed.shortlink.project.service.Impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.Week;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -11,8 +13,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tenseed.shortlink.project.common.convention.exception.ClientException;
 import com.tenseed.shortlink.project.common.convention.exception.ServiceException;
 import com.tenseed.shortlink.project.common.enums.ValidDateTypeEnum;
+import com.tenseed.shortlink.project.dao.entity.LinkAccessStatsDO;
 import com.tenseed.shortlink.project.dao.entity.ShortLinkDO;
 import com.tenseed.shortlink.project.dao.entity.ShortLinkGotoDO;
+import com.tenseed.shortlink.project.dao.mapper.LinkAccessStatsMapper;
 import com.tenseed.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.tenseed.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.tenseed.shortlink.project.dto.req.ShortLinkCreateReqDTO;
@@ -43,6 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +68,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final ShortLinkGotoMapper shortLinkGotoMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final RedissonClient redissonClient;
+    private final LinkAccessStatsMapper linkAccessStatsMapper;
 
     /**
      * 生成短链接后缀
@@ -124,6 +130,49 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }
         // 如果任何步骤失败或未找到 favicon，返回 null
         return null;
+    }
+
+    /**
+     * 短链接访问统计
+     *
+     * @param fullShortUrl 完整短链接
+     * @param gid          分组标识
+     * @param request      HTTP 请求
+     * @param response     HTTP 响应
+     */
+    private void shortLinkStats(String fullShortUrl, String gid, ServletRequest request, ServletResponse response) {
+        try {
+            // 获得当前日期
+            Date date = new Date();
+            // 获得当前日期是本周的星期几
+            Week week = DateUtil.dayOfWeekEnum(date);
+            // 获得当前时间是当天的第几个小时
+            int hour = DateUtil.hour(date, true);
+
+            // 假如 gid 是 null，那么通过短链接跳转表查到当前 fullShortUrl 对应的 gid
+            if (StrUtil.isBlank(gid)) {
+                LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
+                        .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
+                ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
+                gid = shortLinkGotoDO.getGid();
+
+            }
+
+            LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
+                    .fullShortUrl(fullShortUrl)
+                    .gid(gid)
+                    .date(LocalDate.now())
+                    .pv(1)
+                    .uv(1)
+                    .uip(1)
+                    .hour(hour)
+                    .weekday(week.getIso8601Value())
+                    .build();
+
+            linkAccessStatsMapper.shortLinkStats(linkAccessStatsDO);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -243,6 +292,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         // 2️.第一次检查：无锁快速路径—— 先查 Redis 缓存，命中则直接跳转，避免加锁和查库开销
         String originalLink = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
         if (StrUtil.isNotBlank(originalLink)) {
+            shortLinkStats(fullShortUrl, null, request, response); // 跳转成功则进行短链接基础访问统计
             ((HttpServletResponse) response).sendRedirect(originalLink);
             return; // 缓存命中，流程结束
         }
@@ -271,6 +321,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             // 若此时缓存已存在，直接跳转，避免重复查库（节省 DB 资源，提升并发效率）
             originalLink = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
             if (StrUtil.isNotBlank(originalLink)) {
+                shortLinkStats(fullShortUrl, null, request, response); // 跳转成功则进行短链接基础访问统计
                 ((HttpServletResponse) response).sendRedirect(originalLink);
                 return;
             }
@@ -308,6 +359,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     shortLinkDO.getOriginUrl(),
                     LinkUtil.getLinkCacheValidTime(shortLinkDO.getValidDate()), TimeUnit.MILLISECONDS
             );
+
+            shortLinkStats(fullShortUrl, shortLinkDO.getGid(), request, response); // 跳转成功则行短链接基础访问统计
             ((HttpServletResponse) response).sendRedirect(shortLinkDO.getOriginUrl());
 
             // 11.若主表也无有效数据 → 说明短链已失效，静默返回（也可跳转 404 页面）
