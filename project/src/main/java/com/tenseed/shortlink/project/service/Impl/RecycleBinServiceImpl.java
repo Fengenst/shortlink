@@ -8,14 +8,19 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tenseed.shortlink.project.dao.entity.ShortLinkDO;
 import com.tenseed.shortlink.project.dao.mapper.ShortLinkMapper;
+import com.tenseed.shortlink.project.dto.req.RecycleBinRecoverReqDTO;
 import com.tenseed.shortlink.project.dto.req.RecycleBinSaveReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkRecycleBinPageReqDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.tenseed.shortlink.project.service.RecycleBinService;
+import com.tenseed.shortlink.project.toolkit.LinkUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.TimeUnit;
+
+import static com.tenseed.shortlink.project.common.constant.RedisKeyConstant.GOTO_NULL_SHORT_LINK_KEY;
 import static com.tenseed.shortlink.project.common.constant.RedisKeyConstant.GOTO_SHORT_LINK_KEY;
 
 /**
@@ -62,5 +67,41 @@ public class RecycleBinServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLin
             result.setDomain("http://" + result.getDomain());  // 补全域名前缀
             return result;
         });
+    }
+
+    @Override
+    public void recoverRecycleBin(RecycleBinRecoverReqDTO requestParam) {
+        LambdaUpdateWrapper<ShortLinkDO> updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
+                .eq(ShortLinkDO::getGid, requestParam.getGid())
+                .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
+                .eq(ShortLinkDO::getEnableStatus, 1)
+                .eq(ShortLinkDO::getDelFlag, 0);
+        ShortLinkDO shortLinkDO = ShortLinkDO.builder()
+                .enableStatus(0)
+                .build();
+        baseMapper.update(shortLinkDO, updateWrapper);
+
+        // 移出回收站后需要删除 Redis 中对应的空缓存，防止跳转短链接时跳转到 404 页面
+        stringRedisTemplate.delete(
+                String.format(GOTO_NULL_SHORT_LINK_KEY, requestParam.getFullShortUrl())
+        );
+
+        // 重新构建查询条件获取恢复后的短链接信息
+        LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
+                .eq(ShortLinkDO::getGid, requestParam.getGid())
+                .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
+                .eq(ShortLinkDO::getEnableStatus, 0)
+                .eq(ShortLinkDO::getDelFlag, 0);
+        ShortLinkDO recoveredShortLinkDO = baseMapper.selectOne(queryWrapper);
+
+        // 进行缓存预热：将短链接信息放入 Redis 缓存
+        if (recoveredShortLinkDO != null) {
+            stringRedisTemplate.opsForValue().set(
+                    String.format(GOTO_SHORT_LINK_KEY, recoveredShortLinkDO.getFullShortUrl()),
+                    recoveredShortLinkDO.getOriginUrl(),
+                    LinkUtil.getLinkCacheValidTime(recoveredShortLinkDO.getValidDate()),
+                    TimeUnit.MILLISECONDS
+            );
+        }
     }
 }
