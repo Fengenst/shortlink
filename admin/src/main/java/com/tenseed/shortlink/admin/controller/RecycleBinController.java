@@ -5,6 +5,7 @@ import com.tenseed.shortlink.admin.common.convention.result.Result;
 import com.tenseed.shortlink.admin.common.convention.result.Results;
 import com.tenseed.shortlink.admin.remote.ShortLinkRemoteService;
 import com.tenseed.shortlink.admin.remote.dto.req.RecycleBinRecoverReqDTO;
+import com.tenseed.shortlink.admin.remote.dto.req.RecycleBinRemoveReqDTO;
 import com.tenseed.shortlink.admin.remote.dto.req.RecycleBinSaveReqDTO;
 import com.tenseed.shortlink.admin.remote.dto.req.ShortLinkRecycleBinPageReqDTO;
 import com.tenseed.shortlink.admin.remote.dto.resp.ShortLinkPageRespDTO;
@@ -51,6 +52,15 @@ public class RecycleBinController {
     @PostMapping("/api/shortlink/admin/v1/recycle-bin/recover")
     public Result<Void> recoverRecycleBin(@RequestBody RecycleBinRecoverReqDTO requestParam) {
         shortLinkRemoteService.recoverRecycleBin(requestParam);
+        return Results.success();
+    }
+
+    /**
+     * 删除回收站中的短链接
+     */
+    @PostMapping("/api/shortlink/admin/v1/recycle-bin/remove")
+    public Result<Void> removeRecycleBin(@RequestBody RecycleBinRemoveReqDTO requestParam) {
+        shortLinkRemoteService.removeRecycleBin(requestParam);
         return Results.success();
     }
 }
