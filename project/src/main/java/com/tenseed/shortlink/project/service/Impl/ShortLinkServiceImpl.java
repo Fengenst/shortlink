@@ -185,7 +185,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                 .eq(ShortLinkDO::getGid, requestParam.getGid())
                 .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
-                .eq(ShortLinkDO::getDelFlag, 0)
                 .eq(ShortLinkDO::getEnableStatus, 0);
         ShortLinkDO existedShortLinkDO = baseMapper.selectOne(queryWrapper);
         if (existedShortLinkDO == null) {
@@ -212,7 +211,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             LambdaUpdateWrapper<ShortLinkDO> updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
                     .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
                     .eq(ShortLinkDO::getGid, requestParam.getGid())
-                    .eq(ShortLinkDO::getDelFlag, 0)
                     .eq(ShortLinkDO::getEnableStatus, 0)
                     .set(Objects
                                     .equals(requestParam.getValidDateType(), ValidDateTypeEnum.PERMANENT.getType())
@@ -223,7 +221,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             LambdaUpdateWrapper<ShortLinkDO> updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
                     .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
                     .eq(ShortLinkDO::getGid, existedShortLinkDO.getGid())
-                    .eq(ShortLinkDO::getDelFlag, 0)
                     .eq(ShortLinkDO::getEnableStatus, 0);
             baseMapper.delete(updateWrapper);
             baseMapper.insert(shortLinkDO);
@@ -292,10 +289,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
             // 9.根据路由信息（gid）+ 完整短链，查询主表，同时校验“未删除”和“已启用”状态
             LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
-                    .eq(ShortLinkDO::getGid, shortLinkGotoDO.getGid())      // 分组ID，用于分表/业务隔离
-                    .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)         // 完整短链
-                    .eq(ShortLinkDO::getDelFlag, 0)                         // 未删除
-                    .eq(ShortLinkDO::getEnableStatus, 0);                   // 已启用
+                    .eq(ShortLinkDO::getGid, shortLinkGotoDO.getGid()) // 分组ID，用于分表/业务隔离
+                    .eq(ShortLinkDO::getFullShortUrl, fullShortUrl) // 完整短链
+                    .eq(ShortLinkDO::getEnableStatus, 0); // 已启用
 
             ShortLinkDO shortLinkDO = baseMapper.selectOne(queryWrapper);
 
@@ -329,7 +325,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                 .eq(ShortLinkDO::getGid, requestParam.getGid())
                 .eq(ShortLinkDO::getEnableStatus, 0)
-                .eq(ShortLinkDO::getDelFlag, 0)
                 .orderByDesc(ShortLinkDO::getCreateTime);
 
         // 执行分页查询

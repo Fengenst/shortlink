@@ -115,8 +115,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         // 构建查询条件，根据用户名、密码和未删除状态查询用户
         LambdaQueryWrapper<UserDO> queryWrapper = Wrappers.lambdaQuery(UserDO.class)
                 .eq(UserDO::getUsername, requestParam.getUsername())
-                .eq(UserDO::getPassword, requestParam.getPassword())
-                .eq(UserDO::getDelFlag, 0);
+                .eq(UserDO::getPassword, requestParam.getPassword());
         UserDO userDO = baseMapper.selectOne(queryWrapper);
         // 用户不存在或密码错误时抛出异常
         if (userDO == null) {

@@ -32,8 +32,7 @@ public class RecycleBinServiceImpl implements RecycleBinService {
     public Result<IPage<ShortLinkPageRespDTO>> pageRecycleBinShortLink(ShortLinkRecycleBinPageReqDTO requestParam) {
         // 构建查询条件：当前用户的未删除的短链接分组
         LambdaQueryWrapper<GroupDO> queryWrapper = Wrappers.lambdaQuery(GroupDO.class)
-                .eq(GroupDO::getUsername, UserContext.getUsername())
-                .eq(GroupDO::getDelFlag, 0);
+                .eq(GroupDO::getUsername, UserContext.getUsername());
 
         // 根据条件查询短链接分组列表
         List<GroupDO> groupDOList = groupMapper.selectList(queryWrapper);

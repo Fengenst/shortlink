@@ -1,5 +1,6 @@
 server:
   port: 8005
+
 spring:
   datasource:
     # ShardingSphere 对 Driver 自定义，实现分库分表等隐藏逻辑
@@ -11,7 +12,15 @@ spring:
       host: 127.0.0.1
       port: 6379
       password: 123456
+
 user:
   context:
     filter:
       enabled: false  # 禁用 Filter 方式
+
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: delFlag  # 全局逻辑删除的实体字段名
+      logic-delete-value: 1  # 逻辑已删除值(默认为 1)
+      logic-not-delete-value: 0  # 逻辑未删除值(默认为 0)

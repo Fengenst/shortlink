@@ -81,7 +81,6 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
         // 1. 构建查询条件：查询当前用户未删除的分组，按排序字段和创建时间倒序排列
         LambdaQueryWrapper<GroupDO> queryWrapper = Wrappers.lambdaQuery(GroupDO.class)
                 .eq(GroupDO::getUsername, UserContext.getUsername())
-                .eq(GroupDO::getDelFlag, 0)
                 .orderByDesc(List.of(GroupDO::getSortOrder, GroupDO::getCreateTime));
         List<GroupDO> groupDOList = baseMapper.selectList(queryWrapper);
 
@@ -126,8 +125,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
         // 构造更新条件：根据当前用户、分组ID和未删除状态进行更新
         LambdaUpdateWrapper<GroupDO> updateWrapper = Wrappers.lambdaUpdate(GroupDO.class)
                 .eq(GroupDO::getUsername, UserContext.getUsername())
-                .eq(GroupDO::getGid, requestParam.getGid())
-                .eq(GroupDO::getDelFlag, 0);
+                .eq(GroupDO::getGid, requestParam.getGid());
 
         // 构建更新对象，只更新分组名称
         GroupDO groupDO = GroupDO.builder()
@@ -144,8 +142,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
         // 构造更新条件：根据当前用户、分组ID和未删除状态进行更新
         LambdaUpdateWrapper<GroupDO> updateWrapper = Wrappers.lambdaUpdate(GroupDO.class)
                 .eq(GroupDO::getUsername, UserContext.getUsername())
-                .eq(GroupDO::getGid, gid)
-                .eq(GroupDO::getDelFlag, 0);
+                .eq(GroupDO::getGid, gid);
 
         // 逻辑删除：设置删除标识为1，不实际删除数据
         GroupDO groupDO = new GroupDO();
@@ -162,8 +159,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
             // 构造更新条件：根据当前用户、分组ID和未删除状态进行更新
             LambdaUpdateWrapper<GroupDO> updateWrapper = Wrappers.lambdaUpdate(GroupDO.class)
                     .eq(GroupDO::getUsername, UserContext.getUsername())
-                    .eq(GroupDO::getGid, each.getGid())
-                    .eq(GroupDO::getDelFlag, 0);
+                    .eq(GroupDO::getGid, each.getGid());
 
             // 构建更新对象，只更新排序字段
             GroupDO groupDO = GroupDO.builder()
