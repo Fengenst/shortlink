@@ -52,6 +52,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -135,6 +137,24 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     }
 
     /**
+     * 根据当前时间到下一个小时的分钟差值并返回
+     *
+     * @return 分钟数
+     */
+    public static int minutesUntilNextHour() {
+        // 获取当前时间
+        LocalDateTime now = LocalDateTime.now();
+
+        // 获取下一个整点时间
+        LocalDateTime nextHour = now.plusHours(1).truncatedTo(ChronoUnit.HOURS);
+
+        // 计算当前时间到下一个整点的分钟差值
+        long minutesUntilNextHour = ChronoUnit.MINUTES.between(now, nextHour);
+
+        return (int) minutesUntilNextHour;
+    }
+
+    /**
      * 短链接访问统计
      *
      * @param fullShortUrl 完整短链接
@@ -162,6 +182,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .ifPresentOrElse(each -> {
                             Long uvAdded = stringRedisTemplate.opsForSet().add("short-link:stats:uv" + fullShortUrl, each);
                             uvFirstFlag.set(uvAdded != null && uvAdded > 0L);
+                            // 正确：只有当 uvAdded > 0L 时（即成功新增）才设置过期时间
+                            if (uvAdded != null && uvAdded > 0L) {
+                                stringRedisTemplate.expire("short-link:stats:uv" + fullShortUrl, minutesUntilNextHour(), TimeUnit.MINUTES);
+                            }
                         }, addResponseCookieTask);
             } else {
                 addResponseCookieTask.run();
@@ -170,6 +194,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             String remoteAddr = LinkUtil.getActualIp(((HttpServletRequest) request));
             Long uipAdded = stringRedisTemplate.opsForSet().add("short-link:stats:uip" + fullShortUrl, remoteAddr);
             boolean uipFirstFlag = uipAdded != null && uipAdded > 0L;
+            if (uipFirstFlag) {
+                stringRedisTemplate.expire("short-link:stats:uip" + fullShortUrl, minutesUntilNextHour(), TimeUnit.MINUTES);
+            }
 
             // 假如 gid 是 null，那么通过短链接跳转表查到当前 fullShortUrl 对应的 gid
             if (StrUtil.isBlank(gid)) {
