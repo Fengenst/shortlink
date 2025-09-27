@@ -1,0 +1,51 @@
+package com.tenseed.shortlink.project.dao.entity;
+
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.tenseed.shortlink.project.common.database.BaseDO;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+
+/**
+ * 访问网络统计实体
+ */
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@TableName("t_link_device_stats")
+public class LinkNetworkStatsDO extends BaseDO {
+
+    /**
+     * ID
+     */
+    private Long id;
+
+    /**
+     * 完整短链接
+     */
+    private String fullShortUrl;
+
+    /**
+     * 分组标识，默认值为 'default'
+     */
+    private String gid;
+
+    /**
+     * 日期
+     */
+    private LocalDate date;
+
+    /**
+     * 访问量
+     */
+    private Integer cnt;
+
+    /**
+     * 访问网络
+     */
+    private String network;
+}
