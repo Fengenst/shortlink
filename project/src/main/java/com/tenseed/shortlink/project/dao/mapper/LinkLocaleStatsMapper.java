@@ -10,7 +10,7 @@ import org.apache.ibatis.annotations.Insert;
 public interface LinkLocaleStatsMapper extends BaseMapper<LinkLocaleStatsDO> {
 
     /**
-     * 记录基础访问监控数据
+     * 记录访问地区监控数据
      */
     @Insert("""
             INSERT INTO t_link_locale_stats \

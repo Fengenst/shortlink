@@ -18,14 +18,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tenseed.shortlink.project.common.convention.exception.ClientException;
 import com.tenseed.shortlink.project.common.convention.exception.ServiceException;
 import com.tenseed.shortlink.project.common.enums.ValidDateTypeEnum;
-import com.tenseed.shortlink.project.dao.entity.LinkAccessStatsDO;
-import com.tenseed.shortlink.project.dao.entity.LinkLocaleStatsDO;
-import com.tenseed.shortlink.project.dao.entity.ShortLinkDO;
-import com.tenseed.shortlink.project.dao.entity.ShortLinkGotoDO;
-import com.tenseed.shortlink.project.dao.mapper.LinkAccessStatsMapper;
-import com.tenseed.shortlink.project.dao.mapper.LinkLocaleStatsMapper;
-import com.tenseed.shortlink.project.dao.mapper.ShortLinkGotoMapper;
-import com.tenseed.shortlink.project.dao.mapper.ShortLinkMapper;
+import com.tenseed.shortlink.project.dao.entity.*;
+import com.tenseed.shortlink.project.dao.mapper.*;
 import com.tenseed.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
@@ -81,6 +75,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final RedissonClient redissonClient;
     private final LinkAccessStatsMapper linkAccessStatsMapper;
     private final LinkLocaleStatsMapper linkLocaleStatsMapper;
+    private final LinkOsStatsMapper linkOsStatsMapper;
 
     @Value("${short-link.stats.locale.amap-key}")
     private String statsLocaleAmapKey;
@@ -261,6 +256,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             // 负责将pv/uv/uip累加到当天的每小时记录中
             linkAccessStatsMapper.shortLinkStats(linkAccessStatsDO);
 
+            // 对访问地区的统计
             Map<String, Object> localeParamMap = new HashMap<>();
             localeParamMap.put("key", statsLocaleAmapKey);
             localeParamMap.put("ip", remoteAddr);
@@ -271,7 +267,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             if (StrUtil.isNotBlank(infocode) && StrUtil.equals(infocode, "10000")) {
                 String province = localeResultObj.getString("province");
                 boolean unknownFlag = StrUtil.equals(province, "[]");
-
                 linkLocaleStatsDO = LinkLocaleStatsDO.builder()
                         .fullShortUrl(fullShortUrl)
                         .gid(gid)
@@ -285,6 +280,15 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 linkLocaleStatsMapper.shortLinkLocaleStats(linkLocaleStatsDO);
             }
 
+            // 对访问系统的统计
+            LinkOsStatsDO linkOsStatsDO = LinkOsStatsDO.builder()
+                    .fullShortUrl(fullShortUrl)
+                    .gid(gid)
+                    .date(LocalDate.now())
+                    .cnt(1)
+                    .os(LinkUtil.getOs(((HttpServletRequest) request)))
+                    .build();
+            linkOsStatsMapper.shortLinkOsStats(linkOsStatsDO);
 
         } catch (Exception e) {
             throw new RuntimeException(e);
