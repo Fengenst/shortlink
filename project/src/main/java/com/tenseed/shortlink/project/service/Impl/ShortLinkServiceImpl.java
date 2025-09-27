@@ -6,6 +6,9 @@ import cn.hutool.core.date.Week;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.http.HttpUtil;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -16,9 +19,11 @@ import com.tenseed.shortlink.project.common.convention.exception.ClientException
 import com.tenseed.shortlink.project.common.convention.exception.ServiceException;
 import com.tenseed.shortlink.project.common.enums.ValidDateTypeEnum;
 import com.tenseed.shortlink.project.dao.entity.LinkAccessStatsDO;
+import com.tenseed.shortlink.project.dao.entity.LinkLocaleStatsDO;
 import com.tenseed.shortlink.project.dao.entity.ShortLinkDO;
 import com.tenseed.shortlink.project.dao.entity.ShortLinkGotoDO;
 import com.tenseed.shortlink.project.dao.mapper.LinkAccessStatsMapper;
+import com.tenseed.shortlink.project.dao.mapper.LinkLocaleStatsMapper;
 import com.tenseed.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.tenseed.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.tenseed.shortlink.project.dto.req.ShortLinkCreateReqDTO;
@@ -44,6 +49,7 @@ import org.jsoup.nodes.Element;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -59,6 +65,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.tenseed.shortlink.project.common.constant.RedisKeyConstant.*;
+import static com.tenseed.shortlink.project.common.constant.ShortLinkConstant.AMAP_REMOTE_URL;
 
 /**
  * 短链接接口实现层
@@ -73,6 +80,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final StringRedisTemplate stringRedisTemplate;
     private final RedissonClient redissonClient;
     private final LinkAccessStatsMapper linkAccessStatsMapper;
+    private final LinkLocaleStatsMapper linkLocaleStatsMapper;
+
+    @Value("${short-link.stats.locale.amap-key}")
+    private String statsLocaleAmapKey;
 
     /**
      * 生成短链接后缀
@@ -163,67 +174,118 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      * @param response     HTTP 响应
      */
     private void shortLinkStats(String fullShortUrl, String gid, ServletRequest request, ServletResponse response) {
+        // uvFirstFlag 用于标记本次访问是否为该小时内的首次UV
         AtomicBoolean uvFirstFlag = new AtomicBoolean();
         Cookie[] cookies = ((HttpServletRequest) request).getCookies();
         try {
+            // expireMinutes 计算到下一个整点的小时剩余分钟数，用于设置Redis缓存的过期时间
+            int expireMinutes = minutesUntilNextHour();
+
+            // addResponseCookieTask 是一个Runnable任务，封装了处理“新访客”的逻辑
+            // 只有当浏览器没有携带uv cookie时，才会执行此任务
             Runnable addResponseCookieTask = () -> {
-                String uv = UUID.fastUUID().toString();
+                String uv = UUID.fastUUID().toString(); // 生成一个唯一的ID作为UV标识
                 Cookie uvCookie = new Cookie("uv", uv);
-                uvCookie.setMaxAge(60 * 60 * 24 * 30);
+                uvCookie.setMaxAge(60 * 60 * 24 * 30); // 设置cookie有效期为30天
+                // 设置cookie路径，确保在访问该短链接时浏览器会携带此cookie
                 uvCookie.setPath(StrUtil.sub(fullShortUrl, fullShortUrl.indexOf("/"), fullShortUrl.length()));
-                ((HttpServletResponse) response).addCookie(uvCookie);
-                uvFirstFlag.set(Boolean.TRUE);
+                ((HttpServletResponse) response).addCookie(uvCookie); // 将cookie添加到响应中
+                uvFirstFlag.set(Boolean.TRUE); // 标记本次访问是新的UV
+                // 将UV ID添加到Redis Set，用于去重
                 stringRedisTemplate.opsForSet().add("short-link:stats:uv" + fullShortUrl, uv);
+                // 设置Redis缓存的过期时间，使其与自然小时对齐
+                stringRedisTemplate.expire("short-link:stats:uv" + fullShortUrl, expireMinutes, TimeUnit.MINUTES);
             };
+
+            // 判断请求是否携带任何cookie
             if (ArrayUtil.isNotEmpty(cookies)) {
+                // 过滤出名为"uv"的cookie，并获取其值
                 Arrays.stream(cookies).filter(each -> Objects.equals(each.getName(), "uv"))
                         .findFirst()
                         .map(Cookie::getValue)
+                        // 如果找到了"uv" cookie，执行ifPresent逻辑；否则，执行orElse逻辑
                         .ifPresentOrElse(each -> {
+                            // 尝试将UV ID添加到Redis Set。uvAdded>0L表示添加成功（新的UV）
                             Long uvAdded = stringRedisTemplate.opsForSet().add("short-link:stats:uv" + fullShortUrl, each);
+                            // 根据Redis返回结果设置UV标志
                             uvFirstFlag.set(uvAdded != null && uvAdded > 0L);
-                            // 正确：只有当 uvAdded > 0L 时（即成功新增）才设置过期时间
+
+                            // 有当成功新增UV ID时，才设置过期时间
+                            // 这样做避免了在每次重复访问时都刷新过期时间，从而导致缓存永不过期的问题
                             if (uvAdded != null && uvAdded > 0L) {
-                                stringRedisTemplate.expire("short-link:stats:uv" + fullShortUrl, minutesUntilNextHour(), TimeUnit.MINUTES);
+                                stringRedisTemplate.expire("short-link:stats:uv" + fullShortUrl, expireMinutes, TimeUnit.MINUTES);
                             }
-                        }, addResponseCookieTask);
+                        }, addResponseCookieTask); // 如果没有找到"uv" cookie，执行新访客任务
             } else {
+                // 如果请求完全没有携带cookie，直接执行新访客任务
                 addResponseCookieTask.run();
             }
 
+            // 获取请求IP，并进行UIP统计
             String remoteAddr = LinkUtil.getActualIp(((HttpServletRequest) request));
+            // 尝试将IP添加到Redis Set，uipAdded>0L表示添加成功（新的UIP）
             Long uipAdded = stringRedisTemplate.opsForSet().add("short-link:stats:uip" + fullShortUrl, remoteAddr);
             boolean uipFirstFlag = uipAdded != null && uipAdded > 0L;
+            // 只有当成功新增UIP时，才设置过期时间，原理同UV
             if (uipFirstFlag) {
-                stringRedisTemplate.expire("short-link:stats:uip" + fullShortUrl, minutesUntilNextHour(), TimeUnit.MINUTES);
+                stringRedisTemplate.expire("short-link:stats:uip" + fullShortUrl, expireMinutes, TimeUnit.MINUTES);
             }
 
-            // 假如 gid 是 null，那么通过短链接跳转表查到当前 fullShortUrl 对应的 gid
+            // 假如 gid 是 null，通过短链接跳转表查询对应的分组ID
             if (StrUtil.isBlank(gid)) {
                 LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                         .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
                 ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
                 gid = shortLinkGotoDO.getGid();
-
             }
 
-            // 获得当前日期
+            // 获得当前日期、星期、小时，用于数据库统计
             Date date = new Date();
-            // 获得当前日期是本周的星期几
             Week week = DateUtil.dayOfWeekEnum(date);
-            // 获得当前时间是当天的第几个小时
             int hour = DateUtil.hour(date, true);
+
+            // 构建数据库统计对象，准备进行持久化
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
                     .fullShortUrl(fullShortUrl)
                     .gid(gid)
                     .date(LocalDate.now())
-                    .pv(1)
-                    .uv(uvFirstFlag.get() ? 1 : 0)
-                    .uip(uipFirstFlag ? 1 : 0)
+                    .pv(1) // 每次访问PV加1
+                    .uv(uvFirstFlag.get() ? 1 : 0) // 根据uvFirstFlag判断是否新增UV
+                    .uip(uipFirstFlag ? 1 : 0) // 根据uipFirstFlag判断是否新增UIP
                     .hour(hour)
                     .weekday(week.getIso8601Value())
                     .build();
+
+            // 调用Mapper方法，将数据保存到数据库
+            // 这里的shortLinkStats方法使用了ON DUPLICATE KEY UPDATE，
+            // 负责将pv/uv/uip累加到当天的每小时记录中
             linkAccessStatsMapper.shortLinkStats(linkAccessStatsDO);
+
+            Map<String, Object> localeParamMap = new HashMap<>();
+            localeParamMap.put("key", statsLocaleAmapKey);
+            localeParamMap.put("ip", remoteAddr);
+            String localeResultStr = HttpUtil.get(AMAP_REMOTE_URL, localeParamMap);
+            JSONObject localeResultObj = JSON.parseObject(localeResultStr);
+            String infocode = localeResultObj.getString("infocode");
+            LinkLocaleStatsDO linkLocaleStatsDO;
+            if (StrUtil.isNotBlank(infocode) && StrUtil.equals(infocode, "10000")) {
+                String province = localeResultObj.getString("province");
+                boolean unknownFlag = StrUtil.equals(province, "[]");
+
+                linkLocaleStatsDO = LinkLocaleStatsDO.builder()
+                        .fullShortUrl(fullShortUrl)
+                        .gid(gid)
+                        .date(LocalDate.now())
+                        .cnt(1)
+                        .province(unknownFlag ? "未知" : province)
+                        .city(unknownFlag ? "未知" : localeResultObj.getString("city"))
+                        .adcode(unknownFlag ? "未知" : localeResultObj.getString("adcode"))
+                        .country("中国")
+                        .build();
+                linkLocaleStatsMapper.shortLinkLocaleStats(linkLocaleStatsDO);
+            }
+
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

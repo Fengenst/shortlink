@@ -12,11 +12,12 @@ public interface LinkAccessStatsMapper extends BaseMapper<LinkAccessStatsDO> {
     /**
      * 记录基础访问监控数据
      */
-    @Insert("INSERT INTO t_link_access_stats " +
-            "(full_short_url, gid, date, pv, uv, uip, hour, weekday, create_time, update_time, del_flag)\n" +
-            "VALUES " +
-            "(#{fullShortUrl}, #{gid}, #{date}, #{pv}, #{uv}, #{uip}, #{hour}, #{weekday}, NOW(), NOW(), 0)\n" +
-            "ON DUPLICATE KEY UPDATE " +
-            "pv  = pv + #{pv}, uv  = uv + #{uv}, uip = uip + #{uip};")
+    @Insert("""
+            INSERT INTO t_link_access_stats \
+            (full_short_url, gid, date, pv, uv, uip, hour, weekday, create_time, update_time, del_flag)
+            VALUES \
+            (#{fullShortUrl}, #{gid}, #{date}, #{pv}, #{uv}, #{uip}, #{hour}, #{weekday}, NOW(), NOW(), 0)
+            ON DUPLICATE KEY UPDATE \
+            pv  = pv + #{pv}, uv  = uv + #{uv}, uip = uip + #{uip};""")
     void shortLinkStats(LinkAccessStatsDO linkAccessStatsDO);
 }
