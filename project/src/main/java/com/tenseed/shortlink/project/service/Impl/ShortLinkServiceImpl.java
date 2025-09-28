@@ -272,6 +272,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             JSONObject localeResultObj = JSON.parseObject(localeResultStr);
             String infocode = localeResultObj.getString("infocode");
             LinkLocaleStatsDO linkLocaleStatsDO;
+            String actualProvince;
+            String actualCity;
             if (StrUtil.isNotBlank(infocode) && StrUtil.equals(infocode, "10000")) {
                 String province = localeResultObj.getString("province");
                 boolean unknownFlag = StrUtil.equals(province, "[]");
@@ -280,68 +282,73 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .gid(gid)
                         .date(LocalDate.now())
                         .cnt(1)
-                        .province(unknownFlag ? "未知" : province)
-                        .city(unknownFlag ? "未知" : localeResultObj.getString("city"))
+                        .province(actualProvince = unknownFlag ? "未知" : province)
+                        .city(actualCity = unknownFlag ? "未知" : localeResultObj.getString("city"))
                         .adcode(unknownFlag ? "未知" : localeResultObj.getString("adcode"))
                         .country("中国")
                         .build();
                 linkLocaleStatsMapper.shortLinkLocaleStats(linkLocaleStatsDO);
+
+                // 对访问系统的统计
+                String os = LinkUtil.getOs(((HttpServletRequest) request));
+                LinkOsStatsDO linkOsStatsDO = LinkOsStatsDO.builder()
+                        .fullShortUrl(fullShortUrl)
+                        .gid(gid)
+                        .date(LocalDate.now())
+                        .cnt(1)
+                        .os(os)
+                        .build();
+                linkOsStatsMapper.shortLinkOsStats(linkOsStatsDO);
+
+                // 对访问浏览器的统计
+                String browser = LinkUtil.getBrowser(((HttpServletRequest) request));
+                LinkBrowserStatsDO linkBrowserStatsDO = LinkBrowserStatsDO.builder()
+                        .fullShortUrl(fullShortUrl)
+                        .gid(gid)
+                        .date(LocalDate.now())
+                        .cnt(1)
+                        .browser(browser)
+                        .build();
+                linkBrowserStatsMapper.shortLinkBrowserStats(linkBrowserStatsDO);
+
+                // 访问设备
+                String device = LinkUtil.getDevice(((HttpServletRequest) request));
+                LinkDeviceStatsDO linkDeviceStatsDO = LinkDeviceStatsDO.builder()
+                        .device(device)
+                        .cnt(1)
+                        .gid(gid)
+                        .fullShortUrl(fullShortUrl)
+                        .date(LocalDate.now())
+                        .build();
+                linkDeviceStatsMapper.shortLinkDeviceState(linkDeviceStatsDO);
+
+                // 访问网络
+                String network = LinkUtil.getNetwork(((HttpServletRequest) request));
+                LinkNetworkStatsDO linkNetworkStatsDO = LinkNetworkStatsDO.builder()
+                        .network(network)
+                        .cnt(1)
+                        .gid(gid)
+                        .fullShortUrl(fullShortUrl)
+                        .date(LocalDate.now())
+                        .build();
+                linkNetworkStatsMapper.shortLinkNetworkState(linkNetworkStatsDO);
+
+                // 访问日志
+                LinkAccessLogsDO linkAccessLogsDO = LinkAccessLogsDO.builder()
+                        .fullShortUrl(fullShortUrl)
+                        .gid(gid)
+                        .user(uv.get())
+                        .browser(browser)
+                        .os(os)
+                        .ip(remoteAddr)
+                        .network(network)
+                        .device(device)
+                        .locale(StrUtil.join("-", "中国", actualProvince, actualCity))
+                        .build();
+                linkAccessLogsMapper.insert(linkAccessLogsDO);
             }
-
-            // 对访问系统的统计
-            String os = LinkUtil.getOs(((HttpServletRequest) request));
-            LinkOsStatsDO linkOsStatsDO = LinkOsStatsDO.builder()
-                    .fullShortUrl(fullShortUrl)
-                    .gid(gid)
-                    .date(LocalDate.now())
-                    .cnt(1)
-                    .os(os)
-                    .build();
-            linkOsStatsMapper.shortLinkOsStats(linkOsStatsDO);
-
-            // 对访问浏览器的统计
-            String browser = LinkUtil.getBrowser(((HttpServletRequest) request));
-            LinkBrowserStatsDO linkBrowserStatsDO = LinkBrowserStatsDO.builder()
-                    .fullShortUrl(fullShortUrl)
-                    .gid(gid)
-                    .date(LocalDate.now())
-                    .cnt(1)
-                    .browser(browser)
-                    .build();
-            linkBrowserStatsMapper.shortLinkBrowserStats(linkBrowserStatsDO);
-
-            // 访问日志
-            LinkAccessLogsDO linkAccessLogsDO = LinkAccessLogsDO.builder()
-                    .fullShortUrl(fullShortUrl)
-                    .gid(gid)
-                    .user(uv.get())
-                    .browser(browser)
-                    .os(os)
-                    .ip(remoteAddr)
-                    .build();
-            linkAccessLogsMapper.insert(linkAccessLogsDO);
-
-            // 访问设备
-            LinkDeviceStatsDO linkDeviceStatsDO = LinkDeviceStatsDO.builder()
-                    .device(LinkUtil.getDevice(((HttpServletRequest) request)))
-                    .cnt(1)
-                    .gid(gid)
-                    .fullShortUrl(fullShortUrl)
-                    .date(LocalDate.now())
-                    .build();
-            linkDeviceStatsMapper.shortLinkDeviceState(linkDeviceStatsDO);
-
-            // 访问网络
-            LinkNetworkStatsDO linkNetworkStatsDO = LinkNetworkStatsDO.builder()
-                    .network(LinkUtil.getNetwork(((HttpServletRequest) request)))
-                    .cnt(1)
-                    .gid(gid)
-                    .fullShortUrl(fullShortUrl)
-                    .date(LocalDate.now())
-                    .build();
-            linkNetworkStatsMapper.shortLinkNetworkState(linkNetworkStatsDO);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (Throwable e) {
+            log.error("短链接访问量统计异常", e);
         }
     }
 
