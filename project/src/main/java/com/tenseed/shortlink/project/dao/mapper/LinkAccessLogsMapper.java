@@ -4,12 +4,10 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.tenseed.shortlink.project.dao.entity.LinkAccessLogsDO;
 import com.tenseed.shortlink.project.dao.entity.LinkAccessStatsDO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO;
-import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 访问日志监控持久层
@@ -65,49 +63,26 @@ public interface LinkAccessLogsMapper extends BaseMapper<LinkAccessLogsDO> {
                 SUM(new_user) AS newUserCnt
             FROM (
                 SELECT
-                    IF(COUNT(DISTINCT DATE(create_time)) > 1, 1, 0) AS old_user,
-                    IF(COUNT(DISTINCT DATE(create_time)) = 1
-                    AND MAX(create_time) >= #{startDate}
-                    AND MAX(create_time) <= #{endDate}, 1, 0) AS new_user
-            FROM
-                t_link_access_logs
-            WHERE
-                full_short_url = #{fullShortUrl}
-                AND gid = #{gid}
-                AND del_flag = 0
-            GROUP BY
-                user
+                    CASE
+                        WHEN COUNT(DISTINCT DATE(create_time)) > 1
+                        THEN 1
+                        ELSE 0
+                    END AS old_user,
+                    CASE
+                        WHEN COUNT(DISTINCT DATE(create_time)) = 1
+                        AND MAX(create_time) >= #{startDate}
+                        AND MAX(create_time) <= #{endDate}
+                        THEN 1
+                        ELSE 0
+                    END AS new_user
+                FROM
+                    t_link_access_logs
+                WHERE
+                    full_short_url = #{fullShortUrl}
+                    AND gid = #{gid}
+                    AND del_flag = 0
+                GROUP BY
+                    user
             ) AS user_counts;""")
     HashMap<String, Object> findUvTypeCntByShortLink(ShortLinkStatsReqDTO requestParam);
-
-    /**
-     * 根据分组获取指定日期内新旧访客数据
-     */
-    @Select(" <script> " +
-            "SELECT " +
-            "    user, " +
-            "    CASE " +
-            "        WHEN MIN(create_time) BETWEEN CONCAT(#{startDate},' 00:00:00') AND CONCAT(#{endDate},' 23:59:59') THEN '新访客' " +
-            "        ELSE '老访客' " +
-            "    END AS uvType " +
-            "FROM " +
-            "    t_link_access_logs " +
-            "WHERE " +
-            "    full_short_url = #{fullShortUrl} " +
-            "    AND gid = #{gid} " +
-            "    AND user IN " +
-            "    <foreach item='item' index='index' collection='userAccessLogsList' open='(' separator=',' close=')'> " +
-            "        #{item} " +
-            "    </foreach> " +
-            "GROUP BY " +
-            "    user;" +
-            "    </script>"
-    )
-    List<Map<String, Object>> selectUvByUsers(
-            @Param("gid") String gid,
-            @Param("fullShortUrl") String fullShortUrl,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate,
-            @Param("userAccessLogsList") List<String> userAccessLogsList
-    );
 }
