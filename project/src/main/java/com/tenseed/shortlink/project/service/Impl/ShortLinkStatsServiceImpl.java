@@ -14,9 +14,11 @@ import com.tenseed.shortlink.project.dao.entity.LinkLocaleStatsDO;
 import com.tenseed.shortlink.project.dao.mapper.*;
 import com.tenseed.shortlink.project.dto.req.ShortLinkStatsAccessRecordReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO;
+import com.tenseed.shortlink.project.dto.req.ShortLinkUvTypeQueryDTO;
 import com.tenseed.shortlink.project.dto.resp.*;
 import com.tenseed.shortlink.project.service.ShortLinkStatsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -371,13 +373,10 @@ public class ShortLinkStatsServiceImpl implements ShortLinkStatsService {
         if (CollectionUtil.isEmpty(userAccessLogsList)) {
             return actualResult;
         }
-        List<Map<String, Object>> uvTypeList = linkAccessLogsMapper.selectUvByUsers(
-                requestParam.getGid(),
-                requestParam.getFullShortUrl(),
-                requestParam.getStartDate(),
-                requestParam.getEndDate(),
-                userAccessLogsList
-        );
+        ShortLinkUvTypeQueryDTO shortLinkUvTypeQueryDTO = new ShortLinkUvTypeQueryDTO();
+        BeanUtils.copyProperties(requestParam, shortLinkUvTypeQueryDTO);
+        shortLinkUvTypeQueryDTO.setUserAccessLogsList(userAccessLogsList);
+        List<Map<String, Object>> uvTypeList = linkAccessLogsMapper.selectUvByUsers(shortLinkUvTypeQueryDTO);
         actualResult.getRecords().forEach(each -> {
             String uvType = uvTypeList.stream()
                     .filter(item -> Objects.equals(each.getUser(), item.get("user")))

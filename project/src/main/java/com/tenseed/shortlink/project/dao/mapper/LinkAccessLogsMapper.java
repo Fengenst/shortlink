@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.tenseed.shortlink.project.dao.entity.LinkAccessLogsDO;
 import com.tenseed.shortlink.project.dao.entity.LinkAccessStatsDO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO;
+import com.tenseed.shortlink.project.dto.req.ShortLinkUvTypeQueryDTO;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
@@ -103,11 +104,5 @@ public interface LinkAccessLogsMapper extends BaseMapper<LinkAccessLogsDO> {
             "    user;" +
             "    </script>"
     )
-    List<Map<String, Object>> selectUvByUsers(
-            @Param("gid") String gid,
-            @Param("fullShortUrl") String fullShortUrl,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate,
-            @Param("userAccessLogsList") List<String> userAccessLogsList
-    );
+    List<Map<String, Object>> selectUvByUsers(ShortLinkUvTypeQueryDTO shortLinkUvTypeQueryDTO);
 }
