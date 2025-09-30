@@ -366,6 +366,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         shortLinkDO.setFullShortUrl(fullShortUrl);
         // 获取目标网站favicon图标
         // shortLinkDO.setFavicon(getFavicon(requestParam.getOriginUrl()));
+        shortLinkDO.setTotalPv(0);
+        shortLinkDO.setTotalUv(0);
+        shortLinkDO.setTotalUip(0);
 
         // 构建短链接路由实体对象
         ShortLinkGotoDO shortLinkGotoDO = ShortLinkGotoDO.builder()
