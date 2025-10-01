@@ -569,18 +569,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     @Override
     public IPage<ShortLinkPageRespDTO> pageShortLink(ShortLinkPageReqDTO requestParam) {
-        // 构造查询条件：根据分组 ID 查询未删除的启用短链接，按创建时间倒序排列
-        LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
-                .eq(ShortLinkDO::getGid, requestParam.getGid())
-                .eq(ShortLinkDO::getEnableStatus, 0)
-                .orderByDesc(ShortLinkDO::getCreateTime);
-
-        // 执行分页查询
-        IPage<ShortLinkDO> resultPage = baseMapper.selectPage(requestParam, queryWrapper);
-        // 转换查询结果为响应 DTO，并添加 http 前缀
+        IPage<ShortLinkDO> resultPage = baseMapper.pageLink(requestParam);
         return resultPage.convert(each -> {
             ShortLinkPageRespDTO result = BeanUtil.toBean(each, ShortLinkPageRespDTO.class);
-            result.setDomain("http://" + result.getDomain());  // 补全域名前缀
+            result.setDomain("http://" + result.getDomain());
             return result;
         });
     }
