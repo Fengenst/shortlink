@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tenseed.shortlink.project.dao.mapper.LinkOsStatsMapper">
+
+    <!-- 记录访问系统监控数据 -->
+    <insert id="shortLinkOsStats" parameterType="com.tenseed.shortlink.project.dao.entity.LinkOsStatsDO">
+        INSERT INTO t_link_os_stats
+        (full_short_url, gid, date, cnt, os, create_time, update_time, del_flag)
+        VALUES (#{fullShortUrl}, #{gid}, #{date}, #{cnt}, #{os}, NOW(), NOW(), 0)
+        ON DUPLICATE KEY UPDATE cnt = cnt + #{cnt};
+    </insert>
+
+    <!-- 根据短链接获取指定日期内操作系统监控数据 -->
+    <select id="listOsStatsByShortLink" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO"
+            resultType="java.util.HashMap">
+        SELECT os,
+               SUM(cnt) AS count
+        FROM t_link_os_stats
+        WHERE full_short_url = #{fullShortUrl}
+          AND gid = #{gid}
+          AND date BETWEEN #{startDate} AND #{endDate}
+          AND del_flag = 0
+        GROUP BY full_short_url, gid, os;
+    </select>
+
+    <!-- 根据分组获取指定日期内操作系统监控数据 -->
+    <select id="listOsStatsByGroup" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkGroupStatsReqDTO"
+            resultType="java.util.HashMap">
+        SELECT os,
+               SUM(cnt) AS count
+        FROM t_link_os_stats
+        WHERE gid = #{gid}
+          AND date BETWEEN #{startDate} and #{endDate}
+        GROUP BY gid, os;
+    </select>
+</mapper>

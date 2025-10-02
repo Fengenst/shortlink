@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tenseed.shortlink.project.dao.mapper.LinkAccessLogsMapper">
+
+    <!-- 根据短链接获取指定日期内PV、UV、UIP数据 -->
+    <select id="queryPvUvUipByShortLink" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO"
+            resultType="com.tenseed.shortlink.project.dao.entity.LinkAccessStatsDO">
+        SELECT COUNT(*)             AS pv,
+               COUNT(DISTINCT user) AS uv,
+               COUNT(DISTINCT ip)   AS uip
+        FROM t_link_access_logs
+        WHERE full_short_url = #{fullShortUrl}
+          AND gid = #{gid}
+          AND del_flag = 0
+          AND create_time BETWEEN #{startDate} AND #{endDate}
+        GROUP BY full_short_url, gid
+    </select>
+
+    <!-- 根据短链接获取指定日期内的高频访问 IP 数据 -->
+    <select id="listTopIpByShortLink" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO"
+            resultType="java.util.HashMap">
+        SELECT ip,
+               COUNT(ip) AS count
+        FROM t_link_access_logs
+        WHERE full_short_url = #{fullShortUrl}
+          AND gid = #{gid}
+          AND del_flag = 0
+          AND create_time BETWEEN #{startDate} AND #{endDate}
+        GROUP BY full_short_url, gid, ip
+        ORDER BY count DESC
+        LIMIT 5
+    </select>
+
+    <!-- 根据分组获取指定日期内高频访问IP数据 -->
+    <select id="listTopIpByGroup" resultType="java.util.HashMap">
+        SELECT ip,
+               COUNT(ip) AS count
+        FROM t_link_access_logs
+        WHERE gid = #{param.gid}
+          AND create_time BETWEEN #{param.startDate} and #{param.endDate}
+        GROUP BY gid, ip
+        ORDER BY count DESC
+        LIMIT 5
+    </select>
+
+    <!-- 根据短链接获取指定日期内新旧访客数据 -->
+    <select id="findUvTypeCntByShortLink" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO"
+            resultType="java.util.HashMap">
+        SELECT SUM(old_user) AS oldUserCnt,
+               SUM(new_user) AS newUserCnt
+        FROM (SELECT IF(COUNT(DISTINCT DATE(create_time)) > 1, 1, 0)     AS old_user,
+                     IF(COUNT(DISTINCT DATE(create_time)) = 1
+                            AND MAX(create_time) &gt;= #{startDate}
+                            AND MAX(create_time) &lt;= #{endDate}, 1, 0) AS new_user
+              FROM t_link_access_logs
+              WHERE full_short_url = #{fullShortUrl}
+                AND gid = #{gid}
+                AND del_flag = 0
+              GROUP BY user) AS user_counts
+    </select>
+
+    <!-- 获取用户信息是否新老访客 -->
+    <select id="selectUvByUsers" parameterType="com.tenseed.shortlink.project.dto.ShortLinkUvTypeQueryDTO"
+            resultType="java.util.Map">
+        SELECT
+        user,
+        IF(MIN(create_time) BETWEEN CONCAT(#{startDate},' 00:00:00') AND CONCAT(#{endDate},' 23:59:59'), '新访客',
+        '老访客') AS uvType
+        FROM
+        t_link_access_logs
+        WHERE
+        full_short_url = #{fullShortUrl}
+        AND gid = #{gid}
+        AND user IN
+        <foreach item='item' index='index' collection='userAccessLogsList' open='(' separator=',' close=')'>
+            #{item}
+        </foreach>
+        GROUP BY
+        user
+    </select>
+
+    <!-- 获取分组用户信息是否新老访客 -->
+    <select id="selectGroupUvTypeByUsers" resultType="java.util.Map">
+        SELECT
+        user,
+        IF(MIN(create_time) BETWEEN #{startDate} AND #{endDate}, '新访客', '老访客') AS uvType
+        FROM
+        t_link_access_logs
+        WHERE
+        gid = #{gid}
+        AND user IN
+        <foreach item='item' index='index' collection='userAccessLogsList' open='(' separator=',' close=')'>
+            #{item}
+        </foreach>
+        GROUP BY
+        user
+    </select>
+
+    <!-- 根据分组获取指定日期内PV、UV、UIP数据 -->
+    <select id="findPvUvUidStatsByGroup" resultType="com.tenseed.shortlink.project.dao.entity.LinkAccessStatsDO">
+        SELECT COUNT(user)          AS pv,
+               COUNT(DISTINCT user) AS uv,
+               COUNT(DISTINCT ip)   AS uip
+        FROM t_link_access_logs
+        WHERE gid = #{param.gid}
+          AND create_time BETWEEN #{param.startDate} and #{param.endDate}
+        GROUP BY gid
+    </select>
+</mapper>

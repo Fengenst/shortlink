@@ -2,6 +2,17 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.tenseed.shortlink.project.dao.mapper.ShortLinkMapper">
 
+    <!--短链接访问统计自增-->
+    <update id="incrementStats" parameterType="com.tenseed.shortlink.project.dto.ShortLinkStatsIncrementDTO">
+        UPDATE t_link
+        SET total_pv  = total_pv + #{totalPv},
+            total_uv  = total_uv + #{totalUv},
+            total_uip = total_uip + #{totalUip}
+        WHERE gid = #{gid}
+          AND full_short_url = #{fullShortUrl}
+    </update>
+
+
     <!-- 分页查询短链接 -->
     <select id="pageLink" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkPageReqDTO"
             resultType="com.tenseed.shortlink.project.dao.entity.ShortLinkDO">

@@ -20,6 +20,7 @@ import com.tenseed.shortlink.project.common.convention.exception.ServiceExceptio
 import com.tenseed.shortlink.project.common.enums.ValidDateTypeEnum;
 import com.tenseed.shortlink.project.dao.entity.*;
 import com.tenseed.shortlink.project.dao.mapper.*;
+import com.tenseed.shortlink.project.dto.ShortLinkStatsIncrementDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
@@ -349,7 +350,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 linkAccessLogsMapper.insert(linkAccessLogsDO);
 
                 // 累加统计数据
-                baseMapper.incrementStats(gid, fullShortUrl, 1, uvFirstFlag.get() ? 1 : 0, uipFirstFlag ? 1 : 0);
+                ShortLinkStatsIncrementDTO linkStatsIncrementDTO = ShortLinkStatsIncrementDTO.builder()
+                        .gid(gid)
+                        .fullShortUrl(fullShortUrl)
+                        .totalPv(1)
+                        .totalUv(uvFirstFlag.get() ? 1 : 0)
+                        .totalUip(uipFirstFlag ? 1 : 0)
+                        .build();
+                baseMapper.incrementStats(linkStatsIncrementDTO);
 
                 // 今日统计
                 LinkStatsTodayDO linkStatsTodayDO = LinkStatsTodayDO.builder()

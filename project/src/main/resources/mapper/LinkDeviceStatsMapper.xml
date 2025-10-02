@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tenseed.shortlink.project.dao.mapper.LinkDeviceStatsMapper">
+
+    <!-- 记录访问设备监控数据 -->
+    <insert id="shortLinkDeviceState" parameterType="com.tenseed.shortlink.project.dao.entity.LinkDeviceStatsDO">
+        INSERT INTO t_link_device_stats
+        (full_short_url, gid, date, cnt, device, create_time, update_time, del_flag)
+        VALUES (#{fullShortUrl}, #{gid}, #{date}, #{cnt}, #{device}, NOW(), NOW(), 0)
+        ON DUPLICATE KEY UPDATE cnt = cnt + #{cnt};
+    </insert>
+
+    <!-- 根据短链接获取指定日期内设备监控数据 -->
+    <select id="listDeviceStatsByShortLink" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO"
+            resultType="java.util.HashMap">
+        SELECT device,
+               SUM(cnt) AS count
+        FROM t_link_device_stats
+        WHERE full_short_url = #{fullShortUrl}
+          AND gid = #{gid}
+          AND date BETWEEN #{startDate} AND #{endDate}
+          AND del_flag = 0
+        GROUP BY full_short_url, gid, device;
+    </select>
+
+    <!-- 根据分组获取指定日期内访问设备监控数据 -->
+    <select id="listDeviceStatsByGroup" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkGroupStatsReqDTO"
+            resultType="com.tenseed.shortlink.project.dao.entity.LinkDeviceStatsDO">
+        SELECT device,
+               SUM(cnt) AS cnt
+        FROM t_link_device_stats
+        WHERE gid = #{gid}
+          AND date BETWEEN #{startDate} and #{endDate}
+        GROUP BY gid, device;
+    </select>
+</mapper>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tenseed.shortlink.project.dao.mapper.LinkLocaleStatsMapper">
+
+    <!-- 记录访问地区监控数据 -->
+    <insert id="shortLinkLocaleStats" parameterType="com.tenseed.shortlink.project.dao.entity.LinkLocaleStatsDO">
+        INSERT INTO t_link_locale_stats
+        (full_short_url, gid, date, cnt, province, city, adcode, country, create_time, update_time, del_flag)
+        VALUES (#{fullShortUrl}, #{gid}, #{date}, #{cnt}, #{province}, #{city}, #{adcode}, #{country}, NOW(), NOW(), 0)
+        ON DUPLICATE KEY UPDATE cnt = cnt + #{cnt};
+    </insert>
+
+    <!-- 根据短链接获取指定日期内地区监控数据 -->
+    <select id="listLocaleByShortLink" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO"
+            resultType="com.tenseed.shortlink.project.dao.entity.LinkLocaleStatsDO">
+        SELECT province,
+               SUM(cnt) AS cnt
+        FROM t_link_locale_stats
+        WHERE full_short_url = #{fullShortUrl}
+          AND gid = #{gid}
+          AND del_flag = 0
+          AND date BETWEEN #{startDate} AND #{endDate}
+        GROUP BY full_short_url, gid, province;
+    </select>
+
+    <!-- 根据分组获取指定日期内地区监控数据 -->
+    <select id="listLocaleByGroup" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkGroupStatsReqDTO"
+            resultType="com.tenseed.shortlink.project.dao.entity.LinkLocaleStatsDO">
+        SELECT province,
+               SUM(cnt) AS cnt
+        FROM t_link_locale_stats
+        WHERE gid = #{gid}
+          AND date BETWEEN #{startDate} and #{endDate}
+        GROUP BY gid, province;
+    </select>
+</mapper>
