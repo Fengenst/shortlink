@@ -14,7 +14,7 @@ public class ShortLinkGroupCountQueryRespDTO {
     private String gid;
 
     /**
-     * 分组下短链接数量
+     * 短链接数量
      */
     private Integer shortLinkCount;
 }
