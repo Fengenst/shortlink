@@ -70,28 +70,26 @@ public class ShortLinkStatsServiceImpl implements ShortLinkStatsService {
                 .stream()
                 .map(DateUtil::formatDate)
                 .toList();
-        rangeDates.forEach(each -> {
-            linkAccessStatsDOList.stream()
-                    .filter(item -> Objects.equals(each, item.getDate().toString()))
-                    .findFirst()
-                    .ifPresentOrElse(item -> {
-                        ShortLinkStatsAccessDailyRespDTO accessDailyRespDTO = ShortLinkStatsAccessDailyRespDTO.builder()
-                                .date(each)
-                                .pv(item.getPv())
-                                .uv(item.getUv())
-                                .uip(item.getUip())
-                                .build();
-                        daily.add(accessDailyRespDTO);
-                    }, () -> {
-                        ShortLinkStatsAccessDailyRespDTO accessDailyRespDTO = ShortLinkStatsAccessDailyRespDTO.builder()
-                                .date(each)
-                                .pv(0)
-                                .uv(0)
-                                .uip(0)
-                                .build();
-                        daily.add(accessDailyRespDTO);
-                    });
-        });
+        rangeDates.forEach(each -> linkAccessStatsDOList.stream()
+                .filter(item -> Objects.equals(each, item.getDate().toString()))
+                .findFirst()
+                .ifPresentOrElse(item -> {
+                    ShortLinkStatsAccessDailyRespDTO accessDailyRespDTO = ShortLinkStatsAccessDailyRespDTO.builder()
+                            .date(each)
+                            .pv(item.getPv())
+                            .uv(item.getUv())
+                            .uip(item.getUip())
+                            .build();
+                    daily.add(accessDailyRespDTO);
+                }, () -> {
+                    ShortLinkStatsAccessDailyRespDTO accessDailyRespDTO = ShortLinkStatsAccessDailyRespDTO.builder()
+                            .date(each)
+                            .pv(0)
+                            .uv(0)
+                            .uip(0)
+                            .build();
+                    daily.add(accessDailyRespDTO);
+                }));
 
 
         /*
