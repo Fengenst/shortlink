@@ -3,9 +3,11 @@ package com.tenseed.shortlink.project.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.tenseed.shortlink.project.common.convention.result.Result;
 import com.tenseed.shortlink.project.common.convention.result.Results;
+import com.tenseed.shortlink.project.dto.req.ShortLinkBatchCreateReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
+import com.tenseed.shortlink.project.dto.resp.ShortLinkBatchCreateRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkPageRespDTO;
@@ -33,6 +35,14 @@ public class ShortLinkController {
     public Result<ShortLinkCreateRespDTO> createShortLink(@RequestBody ShortLinkCreateReqDTO requestParam) {
         ShortLinkCreateRespDTO shortLinkCreateRespDTO = shortLinkService.createShortLink(requestParam);
         return Results.success(shortLinkCreateRespDTO);
+    }
+
+    /**
+     * 批量创建短链接
+     */
+    @PostMapping("/api/short-link/v1/create/batch")
+    public Result<ShortLinkBatchCreateRespDTO> batchCreateShortLink(@RequestBody ShortLinkBatchCreateReqDTO requestParam) {
+        return Results.success(shortLinkService.batchCreateShortLink(requestParam));
     }
 
     /**
