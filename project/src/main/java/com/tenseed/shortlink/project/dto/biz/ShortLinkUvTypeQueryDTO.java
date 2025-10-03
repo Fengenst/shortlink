@@ -1,4 +1,4 @@
-package com.tenseed.shortlink.project.dto;
+package com.tenseed.shortlink.project.dto.biz;
 
 import lombok.Data;
 
