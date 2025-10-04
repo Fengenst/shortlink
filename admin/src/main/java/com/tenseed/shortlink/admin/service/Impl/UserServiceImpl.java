@@ -1,6 +1,7 @@
 package com.tenseed.shortlink.admin.service.Impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.UUID;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -26,6 +27,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.tenseed.shortlink.admin.common.constant.RedisCacheConstant.LOCK_USER_REGISTER_KEY;
@@ -130,10 +132,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
            HashValue: JSON字符串, 即用户信息
          */
         //查询Redis中是否存在一个 key为"login_用户名"的记录
-        Boolean hasLogin = stringRedisTemplate.hasKey("login_" + requestParam.getUsername());
-        if (hasLogin) {
-            //如果存在，说明该用户已经登录过，不允许再次登录，抛出异常
-            throw new ClientException(UserErrorCodeEnum.USER_HAS_LOGIN);
+        Map<Object, Object> hasLoginMap = stringRedisTemplate.opsForHash().entries("login_" + requestParam.getUsername());
+        if (CollUtil.isNotEmpty(hasLoginMap)) {
+            String token = hasLoginMap.keySet().stream()
+                    .findFirst()
+                    .map(Object::toString)
+                    .orElseThrow(() -> new ClientException("用户登陆错误"));
+            return new UserLoginRespDTO(token);
         }
         //将用户信息存入 Redis Hash
         String uuid = UUID.randomUUID().toString(); //生成一个唯一标识  ----uuid
