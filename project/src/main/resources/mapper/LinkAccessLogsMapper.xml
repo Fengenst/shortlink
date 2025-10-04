@@ -60,7 +60,7 @@
     </select>
 
     <!-- 获取用户信息是否新老访客 -->
-    <select id="selectUvByUsers" parameterType="com.tenseed.shortlink.project.dto.ShortLinkUvTypeQueryDTO"
+    <select id="selectUvByUsers" parameterType="com.tenseed.shortlink.project.dto.biz.ShortLinkUvTypeQueryDTO"
             resultType="java.util.Map">
         SELECT
         user,

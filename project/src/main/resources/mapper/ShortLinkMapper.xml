@@ -3,7 +3,7 @@
 <mapper namespace="com.tenseed.shortlink.project.dao.mapper.ShortLinkMapper">
 
     <!--短链接访问统计自增-->
-    <update id="incrementStats" parameterType="com.tenseed.shortlink.project.dto.ShortLinkStatsIncrementDTO">
+    <update id="incrementStats" parameterType="com.tenseed.shortlink.project.dto.biz.ShortLinkStatsIncrementDTO">
         UPDATE t_link
         SET total_pv  = total_pv + #{totalPv},
             total_uv  = total_uv + #{totalUv},

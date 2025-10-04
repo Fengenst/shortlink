@@ -10,7 +10,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.tenseed.shortlink.project.dao.entity.*;
 import com.tenseed.shortlink.project.dao.mapper.*;
-import com.tenseed.shortlink.project.dto.ShortLinkUvTypeQueryDTO;
+import com.tenseed.shortlink.project.dto.biz.ShortLinkUvTypeQueryDTO;
 import com.tenseed.shortlink.project.dto.req.*;
 import com.tenseed.shortlink.project.dto.resp.*;
 import com.tenseed.shortlink.project.service.ShortLinkStatsService;

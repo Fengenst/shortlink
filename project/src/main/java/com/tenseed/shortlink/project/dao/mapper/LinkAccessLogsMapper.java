@@ -3,7 +3,7 @@ package com.tenseed.shortlink.project.dao.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.tenseed.shortlink.project.dao.entity.LinkAccessLogsDO;
 import com.tenseed.shortlink.project.dao.entity.LinkAccessStatsDO;
-import com.tenseed.shortlink.project.dto.ShortLinkUvTypeQueryDTO;
+import com.tenseed.shortlink.project.dto.biz.ShortLinkUvTypeQueryDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkGroupStatsReqDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 import org.apache.ibatis.annotations.MapKey;

@@ -3,7 +3,7 @@ package com.tenseed.shortlink.project.dao.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.tenseed.shortlink.project.dao.entity.ShortLinkDO;
-import com.tenseed.shortlink.project.dto.ShortLinkStatsIncrementDTO;
+import com.tenseed.shortlink.project.dto.biz.ShortLinkStatsIncrementDTO;
 import com.tenseed.shortlink.project.dto.req.ShortLinkPageReqDTO;
 
 /**
