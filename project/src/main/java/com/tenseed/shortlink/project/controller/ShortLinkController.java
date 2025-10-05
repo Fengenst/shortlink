@@ -1,5 +1,6 @@
 package com.tenseed.shortlink.project.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.tenseed.shortlink.project.common.convention.result.Result;
 import com.tenseed.shortlink.project.common.convention.result.Results;
@@ -11,6 +12,7 @@ import com.tenseed.shortlink.project.dto.resp.ShortLinkBatchCreateRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.tenseed.shortlink.project.dto.resp.ShortLinkPageRespDTO;
+import com.tenseed.shortlink.project.handler.CustomBlockHandler;
 import com.tenseed.shortlink.project.service.ShortLinkService;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
@@ -32,6 +34,11 @@ public class ShortLinkController {
      * 短链接创建
      */
     @PostMapping("/api/shortlink/v1/create")
+    @SentinelResource(
+            value = "create_short-link",
+            blockHandler = "createShortLinkBlockHandlerMethod",
+            blockHandlerClass = CustomBlockHandler.class
+    )
     public Result<ShortLinkCreateRespDTO> createShortLink(@RequestBody ShortLinkCreateReqDTO requestParam) {
         ShortLinkCreateRespDTO shortLinkCreateRespDTO = shortLinkService.createShortLink(requestParam);
         return Results.success(shortLinkCreateRespDTO);
