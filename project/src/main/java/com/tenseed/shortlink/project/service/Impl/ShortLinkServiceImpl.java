@@ -189,9 +189,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      * @return 短链接统计记录
      */
     private ShortLinkStatsRecordDTO buildLinkStatsRecordAndSetUser(String fullShortUrl, ServletRequest request, ServletResponse response) {
-        // expireMinutes 计算到下一个整点的小时剩余分钟数，用于设置Redis缓存的过期时间
-        int expireMinutes = minutesUntilNextHour();
-
         AtomicBoolean uvFirstFlag = new AtomicBoolean(); // uvFirstFlag 用于标记本次访问是否为该小时内的首次UV
         Cookie[] cookies = ((HttpServletRequest) request).getCookies();
         AtomicReference<String> uv = new AtomicReference<>();
@@ -208,8 +205,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             uvFirstFlag.set(Boolean.TRUE); // 标记本次访问是新的UV
             // 将UV ID添加到Redis Set，用于去重
             stringRedisTemplate.opsForSet().add("short-link:stats:uv" + fullShortUrl, uv.get());
-            // 设置Redis缓存的过期时间，使其与自然小时对齐
-            stringRedisTemplate.expire("short-link:stats:uv" + fullShortUrl, expireMinutes, TimeUnit.MINUTES);
         };
 
         // 判断请求是否携带任何cookie
@@ -223,12 +218,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         uv.set(each);
                         Long uvAdded = stringRedisTemplate.opsForSet().add("short-link:stats:uv:" + fullShortUrl, each);
                         uvFirstFlag.set(uvAdded != null && uvAdded > 0L);
-
-                        // 当成功新增UV ID时，才设置过期时间
-                        // 这样做避免了在每次重复访问时都刷新过期时间，从而导致缓存永不过期的问题
-                        if (uvAdded != null && uvAdded > 0L) {
-                            stringRedisTemplate.expire("short-link:stats:uv" + fullShortUrl, expireMinutes, TimeUnit.MINUTES);
-                        }
                     }, addResponseCookieTask); // 如果没有找到"uv" cookie，执行新访客任务
         } else {
             // 如果请求完全没有携带cookie，直接执行新访客任务
@@ -241,10 +230,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String network = LinkUtil.getNetwork(((HttpServletRequest) request));
         Long uipAdded = stringRedisTemplate.opsForSet().add("short-link:stats:uip:" + fullShortUrl, remoteAddr);
         boolean uipFirstFlag = uipAdded != null && uipAdded > 0L;
-        // 只有当成功新增UIP时，才设置过期时间，原理同UV
-        if (uipFirstFlag) {
-            stringRedisTemplate.expire("short-link:stats:uv" + fullShortUrl, expireMinutes, TimeUnit.MINUTES);
-        }
         return ShortLinkStatsRecordDTO.builder()
                 .fullShortUrl(fullShortUrl)
                 .uv(uv.get())
