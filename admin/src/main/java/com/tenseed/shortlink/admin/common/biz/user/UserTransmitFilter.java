@@ -16,6 +16,7 @@ import java.io.PrintWriter;
 import java.util.List;
 import java.util.Objects;
 
+import static com.tenseed.shortlink.admin.common.constant.RedisCacheConstant.USER_LOGIN_KEY;
 import static com.tenseed.shortlink.admin.common.enums.UserErrorCodeEnum.USER_TOKEN_FAIL;
 
 /**
@@ -37,7 +38,7 @@ public class UserTransmitFilter implements Filter {
         String requestURI = httpServletRequest.getRequestURI();
         if (!IGNORE_URI.contains(requestURI)) {
             String method = httpServletRequest.getMethod();
-            if (!(Objects.equals(requestURI, "/api/short-link/admin/v1/user/login") && Objects.equals(method, "POST"))) {
+            if (!(Objects.equals(requestURI, "/api/short-link/admin/v1/user") && Objects.equals(method, "POST"))) {
                 String username = httpServletRequest.getHeader("username");
                 String token = httpServletRequest.getHeader("token");
                 if (!StrUtil.isAllNotBlank(username, token)) {
@@ -46,7 +47,7 @@ public class UserTransmitFilter implements Filter {
                 }
                 Object userInfoJsonStr;
                 try {
-                    userInfoJsonStr = stringRedisTemplate.opsForHash().get("login_" + username, token);
+                    userInfoJsonStr = stringRedisTemplate.opsForHash().get(USER_LOGIN_KEY + username, token);
                     if (userInfoJsonStr == null) {
                         throw new ClientException(USER_TOKEN_FAIL);
                     }

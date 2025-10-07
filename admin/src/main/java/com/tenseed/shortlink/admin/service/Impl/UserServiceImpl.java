@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.tenseed.shortlink.admin.common.constant.RedisCacheConstant.LOCK_USER_REGISTER_KEY;
+import static com.tenseed.shortlink.admin.common.constant.RedisCacheConstant.USER_LOGIN_KEY;
 
 /**
  * 用户接口实现层
@@ -132,7 +133,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
            HashValue: JSON字符串, 即用户信息
          */
         //查询Redis中是否存在一个 key为"login_用户名"的记录
-        Map<Object, Object> hasLoginMap = stringRedisTemplate.opsForHash().entries("login_" + requestParam.getUsername());
+        Map<Object, Object> hasLoginMap = stringRedisTemplate.opsForHash().entries(USER_LOGIN_KEY + requestParam.getUsername());
         if (CollUtil.isNotEmpty(hasLoginMap)) {
             String token = hasLoginMap.keySet().stream()
                     .findFirst()
@@ -142,16 +143,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         }
         //将用户信息存入 Redis Hash
         String uuid = UUID.randomUUID().toString(); //生成一个唯一标识  ----uuid
-        stringRedisTemplate.opsForHash().put("login_" + requestParam.getUsername(), uuid, JSON.toJSONString(userDO));
+        stringRedisTemplate.opsForHash().put(USER_LOGIN_KEY + requestParam.getUsername(), uuid, JSON.toJSONString(userDO));
         //设置过期时间
-        stringRedisTemplate.expire("login_" + requestParam.getUsername(), 30L, TimeUnit.DAYS);
+        stringRedisTemplate.expire(USER_LOGIN_KEY + requestParam.getUsername(), 30L, TimeUnit.DAYS);
         return new UserLoginRespDTO(uuid);
     }
 
     @Override
     public Boolean checkLogin(String username, String token) {
         // 检查Redis中是否存在指定用户的登录token，验证用户是否已登录
-        return stringRedisTemplate.opsForHash().get("login_" + username, token) != null;
+        return stringRedisTemplate.opsForHash().get(USER_LOGIN_KEY + username, token) != null;
     }
 
     @Override
@@ -159,7 +160,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         // 验证用户是否已登录
         if (checkLogin(username, token)) {
             // 删除用户的登录会话信息，实现登出
-            stringRedisTemplate.delete("login_" + username);
+            stringRedisTemplate.delete(USER_LOGIN_KEY + username);
             return;
         }
         // token不存在或用户未登录时抛出异常
