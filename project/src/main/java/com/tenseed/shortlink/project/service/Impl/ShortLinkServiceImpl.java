@@ -106,7 +106,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             }
             // 添加时间戳确保每次生成输入不同
             String originUrl = requestParam.getOriginUrl();
-            originUrl += System.currentTimeMillis();
+            originUrl += UUID.randomUUID().toString();
             // 哈希转换为Base62编码
             shortUri = HashUtil.hashToBase62(originUrl);
             // 检查布隆过滤器避免重复
@@ -300,14 +300,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             baseMapper.insert(shortLinkDO);
             shortLinkGotoMapper.insert(shortLinkGotoDO);
         } catch (DuplicateKeyException ex) {
-            // 唯一约束冲突 → 说明短链已存在（可能是并发下生成重复）
-            LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
-                    .eq(ShortLinkDO::getFullShortUrl, fullShortUrl);
-            ShortLinkDO availableShortLinkDO = baseMapper.selectOne(queryWrapper);
-            if (availableShortLinkDO != null) {
-                log.warn("短链接：{} 重复入库", fullShortUrl);
-                throw new ServiceException("短链接生成重复");
-            }
+            throw new ServiceException(String.format("短链接：%s 生成重复", fullShortUrl));
         }
         // 短链接创建时进行缓存预热，避免首次访问时缓存未命中导致查库
         stringRedisTemplate.opsForValue().set(
