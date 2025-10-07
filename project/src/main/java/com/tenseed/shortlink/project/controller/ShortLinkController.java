@@ -33,7 +33,7 @@ public class ShortLinkController {
     /**
      * 短链接创建
      */
-    @PostMapping("/api/shortlink/v1/create")
+    @PostMapping("/api/short-link/v1/create")
     @SentinelResource(
             value = "create_short-link",
             blockHandler = "createShortLinkBlockHandlerMethod",
@@ -55,7 +55,7 @@ public class ShortLinkController {
     /**
      * 短链接修改  根据完整短链接和分组标识
      */
-    @PostMapping("/api/shortlink/v1/update")
+    @PostMapping("/api/short-link/v1/update")
     public Result<Void> updateShortLink(@RequestBody ShortLinkUpdateReqDTO requestParam) {
         shortLinkService.updateShortLink(requestParam);
         return Results.success();
@@ -64,7 +64,7 @@ public class ShortLinkController {
     /**
      * 短链接分页查询
      */
-    @GetMapping("/api/shortlink/v1/page")
+    @GetMapping("/api/short-link/v1/page")
     public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkPageReqDTO requestParam) {
         return Results.success(shortLinkService.pageShortLink(requestParam));
     }
@@ -72,7 +72,7 @@ public class ShortLinkController {
     /**
      * 查询短链接分组内短链接数量
      */
-    @GetMapping("/api/shortlink/v1/count")
+    @GetMapping("/api/short-link/v1/count")
     public Result<List<ShortLinkGroupCountQueryRespDTO>> listGroupShortLinkCount(@RequestParam List<String> requestParam) {
         return Results.success(shortLinkService.listGroupShortLinkCount(requestParam));
     }

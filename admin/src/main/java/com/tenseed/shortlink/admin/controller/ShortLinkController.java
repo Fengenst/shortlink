@@ -35,7 +35,7 @@ public class ShortLinkController {
     /**
      * 短链接创建
      */
-    @PostMapping("/api/shortlink/admin/v1/create")
+    @PostMapping("/api/short-link/admin/v1/create")
     public Result<ShortLinkCreateRespDTO> createShortLink(@RequestBody ShortLinkCreateReqDTO requestParam) {
         return shortLinkRemoteService.createShortLink(requestParam);
     }
@@ -56,7 +56,7 @@ public class ShortLinkController {
     /**
      * 短链接修改
      */
-    @PostMapping("/api/shortlink/admin/v1/update")
+    @PostMapping("/api/short-link/admin/v1/update")
     public Result<Void> updateShortLink(@RequestBody ShortLinkUpdateReqDTO requestParam) {
         shortLinkRemoteService.updateShortLink(requestParam);
         return Results.success();
@@ -65,7 +65,7 @@ public class ShortLinkController {
     /**
      * 短链接分页查询
      */
-    @GetMapping("/api/shortlink/admin/v1/page")
+    @GetMapping("/api/short-link/admin/v1/page")
     public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkPageReqDTO requestParam) {
         return shortLinkRemoteService.pageShortLink(requestParam);
     }

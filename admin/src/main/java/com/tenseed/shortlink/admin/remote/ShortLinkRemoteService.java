@@ -30,7 +30,7 @@ public interface ShortLinkRemoteService {
      * @return 短链接创建响应
      */
     default Result<ShortLinkCreateRespDTO> createShortLink(ShortLinkCreateReqDTO requestParam) {
-        String resultBodyStr = HttpUtil.post("http://127.0.0.1:8004/api/shortlink/v1/create", JSON.toJSONString(requestParam));
+        String resultBodyStr = HttpUtil.post("http://127.0.0.1:8004/api/short-link/v1/create", JSON.toJSONString(requestParam));
         return JSON.parseObject(resultBodyStr, new TypeReference<>() {
         });
     }
@@ -53,7 +53,7 @@ public interface ShortLinkRemoteService {
      * @param requestParam 修改短链接请求参数
      */
     default void updateShortLink(ShortLinkUpdateReqDTO requestParam) {
-        HttpUtil.post("http://127.0.0.1:8004/api/shortlink/v1/update", JSON.toJSONString(requestParam));
+        HttpUtil.post("http://127.0.0.1:8004/api/short-link/v1/update", JSON.toJSONString(requestParam));
     }
 
     /**
@@ -68,7 +68,7 @@ public interface ShortLinkRemoteService {
         requestMap.put("orderTag", requestParam.getOrderTag());
         requestMap.put("current", requestParam.getCurrent());
         requestMap.put("size", requestParam.getSize());
-        String resultPageStr = HttpUtil.get("http://127.0.0.1:8004/api/shortlink/v1/page", requestMap);
+        String resultPageStr = HttpUtil.get("http://127.0.0.1:8004/api/short-link/v1/page", requestMap);
         return JSON.parseObject(resultPageStr, new TypeReference<>() {
         });
     }
@@ -82,7 +82,7 @@ public interface ShortLinkRemoteService {
     default Result<List<ShortLinkGroupCountQueryRespDTO>> listGroupShortLinkCount(List<String> requestParam) {
         HashMap<String, Object> requestMap = new HashMap<>();
         requestMap.put("requestParam", requestParam);
-        String resultPageStr = HttpUtil.get("http://127.0.0.1:8004/api/shortlink/v1/count", requestMap);
+        String resultPageStr = HttpUtil.get("http://127.0.0.1:8004/api/short-link/v1/count", requestMap);
         return JSON.parseObject(resultPageStr, new TypeReference<>() {
         });
     }
@@ -95,7 +95,7 @@ public interface ShortLinkRemoteService {
      * @return 网站标题
      */
     default Result<String> getTitleByUrl(@RequestParam("url") String url) {
-        String resultStr = HttpUtil.get("http://127.0.0.1:8004/api/shortlink/v1/title?url=" + url);
+        String resultStr = HttpUtil.get("http://127.0.0.1:8004/api/short-link/v1/title?url=" + url);
         return JSON.parseObject(resultStr, new TypeReference<>() {
         });
     }
@@ -106,7 +106,7 @@ public interface ShortLinkRemoteService {
      * @param requestParam 回收站保存请求实体
      */
     default void saveRecycleBin(RecycleBinSaveReqDTO requestParam) {
-        HttpUtil.post("http://127.0.0.1:8004/api/shortlink/v1/recycle-bin/save", JSON.toJSONString(requestParam));
+        HttpUtil.post("http://127.0.0.1:8004/api/short-link/v1/recycle-bin/save", JSON.toJSONString(requestParam));
     }
 
     /**
@@ -120,7 +120,7 @@ public interface ShortLinkRemoteService {
         requestMap.put("gidList", requestParam.getGidList());
         requestMap.put("current", requestParam.getCurrent());
         requestMap.put("size", requestParam.getSize());
-        String resultPageStr = HttpUtil.get("http://127.0.0.1:8004/api/shortlink/v1/recycle-bin/page", requestMap);
+        String resultPageStr = HttpUtil.get("http://127.0.0.1:8004/api/short-link/v1/recycle-bin/page", requestMap);
         return JSON.parseObject(resultPageStr, new TypeReference<>() {
         });
     }
@@ -131,7 +131,7 @@ public interface ShortLinkRemoteService {
      * @param requestParam 回收站恢复请求实体
      */
     default void recoverRecycleBin(RecycleBinRecoverReqDTO requestParam) {
-        HttpUtil.post("http://127.0.0.1:8004/api/shortlink/v1/recycle-bin/recover", JSON.toJSONString(requestParam));
+        HttpUtil.post("http://127.0.0.1:8004/api/short-link/v1/recycle-bin/recover", JSON.toJSONString(requestParam));
     }
 
     /**
@@ -140,7 +140,7 @@ public interface ShortLinkRemoteService {
      * @param requestParam 回收站删除请求实体
      */
     default void removeRecycleBin(RecycleBinRemoveReqDTO requestParam) {
-        HttpUtil.post("http://127.0.0.1:8004/api/shortlink/v1/recycle-bin/remove", JSON.toJSONString(requestParam));
+        HttpUtil.post("http://127.0.0.1:8004/api/short-link/v1/recycle-bin/remove", JSON.toJSONString(requestParam));
     }
 
     /**
