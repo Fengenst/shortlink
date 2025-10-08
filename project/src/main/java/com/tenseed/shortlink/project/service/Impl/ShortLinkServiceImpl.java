@@ -53,8 +53,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -153,21 +153,17 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     }
 
     /**
-     * 根据当前时间到下一个小时的分钟差值并返回
+     * 计算当前时间距离明天凌晨 0 点的秒数差
      *
-     * @return 分钟数
+     * @return 距离明天 0 点的秒数
      */
-    public static int minutesUntilNextHour() {
+    public static Long secondsUntilNextDay() {
         // 获取当前时间
         LocalDateTime now = LocalDateTime.now();
-
-        // 获取下一个整点时间
-        LocalDateTime nextHour = now.plusHours(1).truncatedTo(ChronoUnit.HOURS);
-
-        // 计算当前时间到下一个整点的分钟差值
-        long minutesUntilNextHour = ChronoUnit.MINUTES.between(now, nextHour);
-
-        return (int) minutesUntilNextHour;
+        // 获取明天 0 点
+        LocalDateTime tomorrowZero = now.plusDays(1).toLocalDate().atStartOfDay();
+        // 计算两者之间的秒数差
+        return Duration.between(now, tomorrowZero).getSeconds();
     }
 
     /**
@@ -179,6 +175,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      * @return 短链接统计记录
      */
     private ShortLinkStatsRecordDTO buildLinkStatsRecordAndSetUser(String fullShortUrl, ServletRequest request, ServletResponse response) {
+        long secondsUntilNextDay = secondsUntilNextDay();
         AtomicBoolean uvFirstFlag = new AtomicBoolean();
         Cookie[] cookies = ((HttpServletRequest) request).getCookies();
         AtomicReference<String> uv = new AtomicReference<>();
@@ -190,6 +187,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             ((HttpServletResponse) response).addCookie(uvCookie);
             uvFirstFlag.set(Boolean.TRUE);
             stringRedisTemplate.opsForSet().add(SHORT_LINK_STATS_UV_KEY + fullShortUrl, uv.get());
+            stringRedisTemplate.expire(SHORT_LINK_STATS_UV_KEY + fullShortUrl, secondsUntilNextDay, TimeUnit.SECONDS);
         };
         if (ArrayUtil.isNotEmpty(cookies)) {
             Arrays.stream(cookies)
@@ -200,6 +198,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         uv.set(each);
                         Long uvAdded = stringRedisTemplate.opsForSet().add(SHORT_LINK_STATS_UV_KEY + fullShortUrl, each);
                         uvFirstFlag.set(uvAdded != null && uvAdded > 0L);
+                        stringRedisTemplate.expire(SHORT_LINK_STATS_UV_KEY + fullShortUrl, secondsUntilNextDay, TimeUnit.SECONDS);
                     }, addResponseCookieTask);
         } else {
             addResponseCookieTask.run();
@@ -210,6 +209,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String device = LinkUtil.getDevice(((HttpServletRequest) request));
         String network = LinkUtil.getNetwork(((HttpServletRequest) request));
         Long uipAdded = stringRedisTemplate.opsForSet().add(SHORT_LINK_STATS_UIP_KEY + fullShortUrl, remoteAddr);
+        stringRedisTemplate.expire(SHORT_LINK_STATS_UIP_KEY + fullShortUrl, secondsUntilNextDay, TimeUnit.SECONDS);
         boolean uipFirstFlag = uipAdded != null && uipAdded > 0L;
         return ShortLinkStatsRecordDTO.builder()
                 .fullShortUrl(fullShortUrl)
