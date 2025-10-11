@@ -15,10 +15,11 @@ import com.tenseed.shortlink.admin.dao.mapper.GroupMapper;
 import com.tenseed.shortlink.admin.dto.req.ShortLinkGroupSortReqDTO;
 import com.tenseed.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.tenseed.shortlink.admin.dto.resp.ShortLinkGroupRespDTO;
-import com.tenseed.shortlink.admin.remote.ShortLinkRemoteService;
+import com.tenseed.shortlink.admin.remote.ShortLinkActualRemoteService;
 import com.tenseed.shortlink.admin.remote.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.tenseed.shortlink.admin.service.GroupService;
 import com.tenseed.shortlink.admin.toolkit.RandomGenerator;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -35,21 +36,14 @@ import static com.tenseed.shortlink.admin.common.constant.RedisCacheConstant.LOC
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implements GroupService {
 
     private final RedissonClient redissonClient;
+    private final ShortLinkActualRemoteService shortLinkActualRemoteService;
 
     @Value("${short-link.group.max-num}")
     private Integer groupMaxNum;
-
-
-    // TODO 后续重构为 SpringCloud Feign 调用
-    ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
-    };
-
-    public GroupServiceImpl(RedissonClient redissonClient) {
-        this.redissonClient = redissonClient;
-    }
 
     /**
      * 判断GID是否可用
@@ -126,10 +120,10 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
                 .toList();
 
         // 4. 远程调用获取每个分组中的短链接数量
-        Result<List<ShortLinkGroupCountQueryRespDTO>> remoteResult = shortLinkRemoteService.listGroupShortLinkCount(gidList);
-        List<ShortLinkGroupCountQueryRespDTO> shortlinkCounts = (remoteResult == null || remoteResult.getData() == null)
+        Result<List<ShortLinkGroupCountQueryRespDTO>> listResult = shortLinkActualRemoteService.listGroupShortLinkCount(gidList);
+        List<ShortLinkGroupCountQueryRespDTO> shortlinkCounts = (listResult == null || listResult.getData() == null)
                 ? Collections.emptyList()
-                : remoteResult.getData();
+                : listResult.getData();
 
         // 5. 构建分组 ID与短链接数量的映射关系，处理可能的空值情况
         Map<String, Integer> counts = shortlinkCounts
