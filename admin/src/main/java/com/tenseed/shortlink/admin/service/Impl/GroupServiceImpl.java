@@ -162,17 +162,13 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
 
     @Override
     public void deleteGroup(String gid) {
-        // 构造更新条件：根据当前用户、分组ID和未删除状态进行更新
-        LambdaUpdateWrapper<GroupDO> updateWrapper = Wrappers.lambdaUpdate(GroupDO.class)
+        // 构造查询条件（DELETE 语句的 WHERE 条件）
+        LambdaQueryWrapper<GroupDO> queryWrapper = Wrappers.lambdaQuery(GroupDO.class)
                 .eq(GroupDO::getUsername, UserContext.getUsername())
                 .eq(GroupDO::getGid, gid);
 
-        // 逻辑删除：设置删除标识为1，不实际删除数据
-        GroupDO groupDO = new GroupDO();
-        groupDO.setDelFlag(1);  // 标记为已删除
-
-        // 执行更新操作
-        baseMapper.update(groupDO, updateWrapper);
+        // 调用 delete 方法，MP 拦截器会自动转换为 UPDATE ... SET del_flag = 1
+        baseMapper.delete(queryWrapper);
     }
 
     @Override
