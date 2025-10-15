@@ -135,7 +135,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         //查询Redis中是否存在一个 key为"login_用户名"的记录
         Map<Object, Object> hasLoginMap = stringRedisTemplate.opsForHash().entries(USER_LOGIN_KEY + requestParam.getUsername());
         if (CollUtil.isNotEmpty(hasLoginMap)) {
-            stringRedisTemplate.expire(USER_LOGIN_KEY + requestParam.getUsername(), 30L, TimeUnit.MINUTES);
             String token = hasLoginMap.keySet().stream()
                     .findFirst()
                     .map(Object::toString)
