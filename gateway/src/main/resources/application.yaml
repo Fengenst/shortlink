@@ -1,10 +1,14 @@
 server:
   port: 8003
 
-
 spring:
   application:
     name: short-link-gateway
+  profiles:
+    # 聚合模式
+    active: aggregation
+    # 微服务模式
+    # active: dev
   data:
     redis:
       host: 127.0.0.1
@@ -14,22 +18,3 @@ spring:
     nacos:
       discovery:
         server-addr: 192.168.56.1:8848
-    gateway:
-      routes:
-        - id: short-link-admin
-          uri: lb://short-link-admin/api/short-link/admin/**
-          predicates:
-            - Path=/api/short-link/admin/**
-          filters:
-            - name: TokenValidate
-              args:
-                whitePathList:
-                  - /api/short-link/admin/v1/user/login
-                  - /api/short-link/admin/v1/user/has-username
-
-        - id: short-link-project
-          uri: lb://short-link-project/api/short-link/**
-          predicates:
-            - Path=/api/short-link/**
-          filters:
-            - name: TokenValidate

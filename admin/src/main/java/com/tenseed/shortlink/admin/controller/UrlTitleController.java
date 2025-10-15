@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * URL 标题控制器
  */
-@RestController
+@RestController(value = "urlTitleControllerByAdmin")
 @RequiredArgsConstructor
 public class UrlTitleController {
 
