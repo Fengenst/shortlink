@@ -26,12 +26,14 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.tenseed.shortlink.admin.common.constant.RedisCacheConstant.LOCK_USER_REGISTER_KEY;
 import static com.tenseed.shortlink.admin.common.constant.RedisCacheConstant.USER_LOGIN_KEY;
+import static com.tenseed.shortlink.admin.common.enums.UserErrorCodeEnum.*;
 
 /**
  * 用户接口实现层
@@ -71,33 +73,32 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     }
 
     @Override
+    @Transactional
     public void register(UserRegisterReqDTO requestParam) {
         // 检查用户名是否已存在（布隆过滤器判断）
         if (!isUsernameAvailable(requestParam.getUsername())) {
-            throw new ClientException(UserErrorCodeEnum.USER_NAME_EXIST);
+            throw new ClientException(USER_NAME_EXIST);
         }
 
         // 获取分布式锁，防止并发注册
         RLock lock = redissonClient.getLock(LOCK_USER_REGISTER_KEY + requestParam.getUsername());
+        // 获取锁失败，说明可能有其他线程正在注册相同用户名
+        // 使用tryLock而非lock，避免阻塞等待，实现快速失败
+        if (!lock.tryLock()) {
+            throw new ClientException(USER_NAME_EXIST);
+        }
         try {
-            // 使用tryLock而非lock，避免阻塞等待，实现快速失败
-            if (lock.tryLock()) {
-                try {
-                    // 插入用户数据
-                    int insert = baseMapper.insert(BeanUtil.toBean(requestParam, UserDO.class));
-                    if (insert < 1) {
-                        throw new ClientException(UserErrorCodeEnum.USER_SAVE_ERROR);
-                    }
-                } catch (DuplicateKeyException ex) {
-                    throw new ClientException(UserErrorCodeEnum.USER_EXIST);
-                }
-                // 更新布隆过滤器
-                userRegisterCachePenetrationBloomFilter.add(requestParam.getUsername());
-                groupService.saveGroup(requestParam.getUsername(), "默认分组");
-                return;
+            // 插入用户数据
+            int inserted = baseMapper.insert(BeanUtil.toBean(requestParam, UserDO.class));
+            if (inserted < 1) {
+                throw new ClientException(USER_SAVE_ERROR);
             }
-            // 获取锁失败，说明可能有其他线程正在注册相同用户名
-            throw new ClientException(UserErrorCodeEnum.USER_NAME_EXIST);
+            // 更新布隆过滤器
+            userRegisterCachePenetrationBloomFilter.add(requestParam.getUsername());
+            groupService.saveGroup(requestParam.getUsername(), "默认分组");
+            throw new ClientException(USER_NAME_EXIST);
+        } catch (DuplicateKeyException ex) {
+            throw new ClientException(USER_EXIST);
         } finally {
             // 释放锁
             lock.unlock();
