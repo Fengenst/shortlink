@@ -30,6 +30,7 @@ public class ShortLinkStatsController {
         return shortLinkActualRemoteService.oneShortLinkStats(
                 requestParam.getFullShortUrl(),
                 requestParam.getGid(),
+                requestParam.getEnableStatus(),
                 requestParam.getStartDate(),
                 requestParam.getEndDate()
         );
@@ -56,7 +57,11 @@ public class ShortLinkStatsController {
                 requestParam.getFullShortUrl(),
                 requestParam.getGid(),
                 requestParam.getStartDate(),
-                requestParam.getEndDate());
+                requestParam.getEndDate(),
+                requestParam.getEnableStatus(),
+                requestParam.getCurrent(),
+                requestParam.getSize()
+        );
     }
 
     /**
@@ -67,7 +72,9 @@ public class ShortLinkStatsController {
         return shortLinkActualRemoteService.groupShortLinkStatsAccessRecord(
                 requestParam.getGid(),
                 requestParam.getStartDate(),
-                requestParam.getEndDate()
+                requestParam.getEndDate(),
+                requestParam.getCurrent(),
+                requestParam.getSize()
         );
     }
 }

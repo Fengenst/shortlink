@@ -4,33 +4,54 @@
 
     <!-- 记录访问设备监控数据 -->
     <insert id="shortLinkNetworkState" parameterType="com.tenseed.shortlink.project.dao.entity.LinkNetworkStatsDO">
-        INSERT INTO t_link_network_stats
-        (full_short_url, gid, date, cnt, network, create_time, update_time, del_flag)
-        VALUES (#{fullShortUrl}, #{gid}, #{date}, #{cnt}, #{network}, NOW(), NOW(), 0)
-        ON DUPLICATE KEY UPDATE cnt = cnt + #{cnt};
+        INSERT INTO t_link_network_stats (full_short_url,
+                                          date,
+                                          cnt,
+                                          network,
+                                          create_time,
+                                          update_time,
+                                          del_flag)
+        VALUES (#{linkNetworkStats.fullShortUrl},
+                #{linkNetworkStats.date},
+                #{linkNetworkStats.cnt},
+                #{linkNetworkStats.network},
+                NOW(),
+                NOW(),
+                0)
+        ON DUPLICATE KEY UPDATE cnt = cnt + #{linkNetworkStats.cnt};
     </insert>
 
     <!-- 根据短链接获取指定日期内网络监控数据 -->
     <select id="listNetworkStatsByShortLink" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO"
             resultType="java.util.HashMap">
-        SELECT network,
-               SUM(cnt) AS count
-        FROM t_link_network_stats
-        WHERE full_short_url = #{fullShortUrl}
-          AND gid = #{gid}
-          AND date BETWEEN #{startDate} AND #{endDate}
-          AND del_flag = 0
-        GROUP BY full_short_url, gid, network;
+        SELECT tlns.network,
+               SUM(tlns.cnt) AS cnt
+        FROM t_link tl
+                 INNER JOIN t_link_network_stats tlns
+                            ON tl.full_short_url = tlns.full_short_url
+        WHERE tlns.full_short_url = #{param.fullShortUrl}
+          AND tl.gid = #{param.gid}
+          AND tl.del_flag = '0'
+          AND tl.enable_status = #{param.enableStatus}
+          AND tlns.date BETWEEN #{param.startDate} AND #{param.endDate}
+        GROUP BY tlns.full_short_url,
+                 tl.gid,
+                 tlns.network;
     </select>
 
     <!-- 根据分组获取指定日期内访问网络监控数据 -->
     <select id="listNetworkStatsByGroup" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkGroupStatsReqDTO"
             resultType="com.tenseed.shortlink.project.dao.entity.LinkNetworkStatsDO">
-        SELECT network,
-               SUM(cnt) AS cnt
-        FROM t_link_network_stats
-        WHERE gid = #{gid}
-          AND date BETWEEN #{startDate} and #{endDate}
-        GROUP BY gid, network;
+        SELECT tlns.network,
+               SUM(tlns.cnt) AS cnt
+        FROM t_link tl
+                 INNER JOIN t_link_network_stats tlns
+                            ON tl.full_short_url = tlns.full_short_url
+        WHERE tl.gid = #{param.gid}
+          AND tl.del_flag = '0'
+          AND tl.enable_status = '0'
+          AND tlns.date BETWEEN #{param.startDate} AND #{param.endDate}
+        GROUP BY tl.gid,
+                 tlns.network;
     </select>
 </mapper>

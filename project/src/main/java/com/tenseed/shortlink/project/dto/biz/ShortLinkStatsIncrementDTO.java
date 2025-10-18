@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class ShortLinkStatsIncrementDTO {
 
     /**
-     * 分组 ID
+     * 分组标识
      */
     private String gid;
 

@@ -4,33 +4,57 @@
 
     <!-- 记录访问地区监控数据 -->
     <insert id="shortLinkLocaleStats" parameterType="com.tenseed.shortlink.project.dao.entity.LinkLocaleStatsDO">
-        INSERT INTO t_link_locale_stats
-        (full_short_url, gid, date, cnt, province, city, adcode, country, create_time, update_time, del_flag)
-        VALUES (#{fullShortUrl}, #{gid}, #{date}, #{cnt}, #{province}, #{city}, #{adcode}, #{country}, NOW(), NOW(), 0)
-        ON DUPLICATE KEY UPDATE cnt = cnt + #{cnt};
+        INSERT INTO t_link_locale_stats (full_short_url,
+                                         date,
+                                         cnt,
+                                         country,
+                                         province,
+                                         city,
+                                         adcode,
+                                         create_time,
+                                         update_time,
+                                         del_flag)
+        VALUES (#{linkLocaleStats.fullShortUrl},
+                #{linkLocaleStats.date},
+                #{linkLocaleStats.cnt},
+                #{linkLocaleStats.country},
+                #{linkLocaleStats.province},
+                #{linkLocaleStats.city},
+                #{linkLocaleStats.adcode},
+                NOW(),
+                NOW(),
+                0)
+        ON DUPLICATE KEY UPDATE cnt = cnt + #{linkLocaleStats.cnt};
     </insert>
 
     <!-- 根据短链接获取指定日期内地区监控数据 -->
     <select id="listLocaleByShortLink" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO"
             resultType="com.tenseed.shortlink.project.dao.entity.LinkLocaleStatsDO">
-        SELECT province,
-               SUM(cnt) AS cnt
-        FROM t_link_locale_stats
-        WHERE full_short_url = #{fullShortUrl}
-          AND gid = #{gid}
-          AND del_flag = 0
-          AND date BETWEEN #{startDate} AND #{endDate}
-        GROUP BY full_short_url, gid, province;
+        SELECT tlls.province,
+               SUM(tlls.cnt) AS cnt
+        FROM t_link tl
+                 INNER JOIN t_link_locale_stats tlls
+                            ON tl.full_short_url = tlls.full_short_url
+        WHERE tlls.full_short_url = #{param.fullShortUrl}
+          AND tl.gid = #{param.gid}
+          AND tl.del_flag = '0'
+          AND tl.enable_status = #{param.enableStatus}
+          AND tlls.date BETWEEN #{param.startDate} AND #{param.endDate}
     </select>
 
     <!-- 根据分组获取指定日期内地区监控数据 -->
     <select id="listLocaleByGroup" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkGroupStatsReqDTO"
             resultType="com.tenseed.shortlink.project.dao.entity.LinkLocaleStatsDO">
-        SELECT province,
-               SUM(cnt) AS cnt
-        FROM t_link_locale_stats
-        WHERE gid = #{gid}
-          AND date BETWEEN #{startDate} and #{endDate}
-        GROUP BY gid, province;
+        SELECT tlls.province,
+               SUM(tlls.cnt) AS cnt
+        FROM t_link tl
+                 INNER JOIN t_link_locale_stats tlls
+                            ON tl.full_short_url = tlls.full_short_url
+        WHERE tl.gid = #{param.gid}
+          AND tl.del_flag = '0'
+          AND tl.enable_status = '0'
+          AND tlls.date BETWEEN #{param.startDate} AND #{param.endDate}
+        GROUP BY tl.gid,
+                 tlls.province;
     </select>
 </mapper>

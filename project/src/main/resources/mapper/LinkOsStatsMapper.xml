@@ -4,33 +4,54 @@
 
     <!-- 记录访问系统监控数据 -->
     <insert id="shortLinkOsStats" parameterType="com.tenseed.shortlink.project.dao.entity.LinkOsStatsDO">
-        INSERT INTO t_link_os_stats
-        (full_short_url, gid, date, cnt, os, create_time, update_time, del_flag)
-        VALUES (#{fullShortUrl}, #{gid}, #{date}, #{cnt}, #{os}, NOW(), NOW(), 0)
-        ON DUPLICATE KEY UPDATE cnt = cnt + #{cnt};
+        INSERT INTO t_link_os_stats (full_short_url,
+                                     date,
+                                     cnt,
+                                     os,
+                                     create_time,
+                                     update_time,
+                                     del_flag)
+        VALUES (#{linkOsStats.fullShortUrl},
+                #{linkOsStats.date},
+                #{linkOsStats.cnt},
+                #{linkOsStats.os},
+                NOW(),
+                NOW(),
+                0)
+        ON DUPLICATE KEY UPDATE cnt = cnt + #{linkOsStats.cnt};
     </insert>
 
     <!-- 根据短链接获取指定日期内操作系统监控数据 -->
     <select id="listOsStatsByShortLink" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkStatsReqDTO"
             resultType="java.util.HashMap">
-        SELECT os,
-               SUM(cnt) AS count
-        FROM t_link_os_stats
-        WHERE full_short_url = #{fullShortUrl}
-          AND gid = #{gid}
-          AND date BETWEEN #{startDate} AND #{endDate}
-          AND del_flag = 0
-        GROUP BY full_short_url, gid, os;
+        SELECT tlos.os,
+               SUM(tlos.cnt) AS count
+        FROM t_link tl
+                 INNER JOIN t_link_os_stats tlos
+                            ON tl.full_short_url = tlos.full_short_url
+        WHERE tlos.full_short_url = #{param.fullShortUrl}
+          AND tl.gid = #{param.gid}
+          AND tl.del_flag = '0'
+          AND tl.enable_status = #{param.enableStatus}
+          AND tlos.date BETWEEN #{param.startDate} AND #{param.endDate}
+        GROUP BY tlos.full_short_url,
+                 tl.gid,
+                 tlos.os;
     </select>
 
     <!-- 根据分组获取指定日期内操作系统监控数据 -->
     <select id="listOsStatsByGroup" parameterType="com.tenseed.shortlink.project.dto.req.ShortLinkGroupStatsReqDTO"
             resultType="java.util.HashMap">
-        SELECT os,
-               SUM(cnt) AS count
-        FROM t_link_os_stats
-        WHERE gid = #{gid}
-          AND date BETWEEN #{startDate} and #{endDate}
-        GROUP BY gid, os;
+        SELECT tlos.os,
+               SUM(tlos.cnt) AS count
+        FROM t_link tl
+                 INNER JOIN t_link_os_stats tlos
+                            ON tl.full_short_url = tlos.full_short_url
+        WHERE tl.gid = #{param.gid}
+          AND tl.del_flag = '0'
+          AND tl.enable_status = '0'
+          AND tlos.date BETWEEN #{param.startDate} AND #{param.endDate}
+        GROUP BY tl.gid,
+                 tlos.os;
     </select>
 </mapper>

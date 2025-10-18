@@ -14,12 +14,12 @@ public interface LinkDeviceStatsMapper extends BaseMapper<LinkDeviceStatsDO> {
     /**
      * 记录访问设备监控数据
      */
-    void shortLinkDeviceState(LinkDeviceStatsDO linkDeviceStatsDO);
+    void shortLinkDeviceState(@Param("linkDeviceStats") LinkDeviceStatsDO linkDeviceStatsDO);
 
     /**
      * 根据短链接获取指定日期内设备监控数据
      */
-    List<HashMap<String, Object>> listDeviceStatsByShortLink(ShortLinkStatsReqDTO requestParam);
+    List<HashMap<String, Object>> listDeviceStatsByShortLink(@Param("param") ShortLinkStatsReqDTO requestParam);
 
     /**
      * 根据分组获取指定日期内访问设备监控数据

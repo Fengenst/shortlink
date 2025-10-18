@@ -17,12 +17,12 @@ public interface LinkOsStatsMapper extends BaseMapper<LinkOsStatsDO> {
     /**
      * 记录访问系统监控数据
      */
-    void shortLinkOsStats(LinkOsStatsDO linkOsStatsDO);
+    void shortLinkOsStats(@Param("linkOsStats") LinkOsStatsDO linkOsStatsDO);
 
     /**
      * 根据短链接获取指定日期内操作系统监控数据
      */
-    List<HashMap<String, Object>> listOsStatsByShortLink(ShortLinkStatsReqDTO requestParam);
+    List<HashMap<String, Object>> listOsStatsByShortLink(@Param("param") ShortLinkStatsReqDTO requestParam);
 
     /**
      * 根据分组获取指定日期内操作系统监控数据

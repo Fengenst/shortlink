@@ -16,12 +16,12 @@ public interface LinkLocaleStatsMapper extends BaseMapper<LinkLocaleStatsDO> {
     /**
      * 记录访问地区监控数据
      */
-    void shortLinkLocaleStats(LinkLocaleStatsDO linkLocaleStatsDO);
+    void shortLinkLocaleStats(@Param("linkLocaleStats") LinkLocaleStatsDO linkLocaleStatsDO);
 
     /**
      * 根据短链接获取指定日期内地区监控数据
      */
-    List<LinkLocaleStatsDO> listLocaleByShortLink(ShortLinkStatsReqDTO requestParam);
+    List<LinkLocaleStatsDO> listLocaleByShortLink(@Param("param") ShortLinkStatsReqDTO requestParam);
 
     /**
      * 根据分组获取指定日期内地区监控数据

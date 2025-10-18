@@ -14,12 +14,12 @@ public interface LinkNetworkStatsMapper extends BaseMapper<LinkNetworkStatsDO> {
     /**
      * 记录访问设备监控数据
      */
-    void shortLinkNetworkState(LinkNetworkStatsDO linkNetworkStatsDO);
+    void shortLinkNetworkState(@Param("linkNetworkStats") LinkNetworkStatsDO linkNetworkStatsDO);
 
     /**
      * 根据短链接获取指定日期内网络监控数据
      */
-    List<HashMap<String, Object>> listNetworkStatsByShortLink(ShortLinkStatsReqDTO requestParam);
+    List<HashMap<String, Object>> listNetworkStatsByShortLink(@Param("param") ShortLinkStatsReqDTO requestParam);
 
     /**
      * 根据分组获取指定日期内访问网络监控数据

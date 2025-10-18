@@ -5,7 +5,6 @@
     <!-- 记录今日统计监控数据 -->
     <insert id="shortLinkTodayState" parameterType="com.tenseed.shortlink.project.dao.entity.LinkStatsTodayDO">
         INSERT INTO t_link_stats_today (full_short_url,
-                                        gid,
                                         date,
                                         today_uv,
                                         today_pv,
@@ -14,7 +13,6 @@
                                         update_time,
                                         del_flag)
         VALUES (#{linkTodayStats.fullShortUrl},
-                #{linkTodayStats.gid},
                 #{linkTodayStats.date},
                 #{linkTodayStats.todayUv},
                 #{linkTodayStats.todayPv},

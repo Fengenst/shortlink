@@ -124,6 +124,7 @@ public interface ShortLinkActualRemoteService {
      *
      * @param fullShortUrl 完整短链接
      * @param gid          分组标识
+     * @param enableStatus 启用标识
      * @param startDate    开始时间
      * @param endDate      结束时间
      * @return 短链接监控信息
@@ -132,6 +133,7 @@ public interface ShortLinkActualRemoteService {
     Result<ShortLinkStatsRespDTO> oneShortLinkStats(
             @RequestParam("fullShortUrl") String fullShortUrl,
             @RequestParam("gid") String gid,
+            @RequestParam("enableStatus") Integer enableStatus,
             @RequestParam("startDate") String startDate,
             @RequestParam("endDate") String endDate
     );
@@ -158,6 +160,9 @@ public interface ShortLinkActualRemoteService {
      * @param gid          分组标识
      * @param startDate    开始时间
      * @param endDate      结束时间
+     * @param enableStatus 启用标识
+     * @param current      当前页
+     * @param size         当前页数据量
      * @return 短链接监控访问记录信息
      */
     @GetMapping("/api/short-link/v1/stats/access-record")
@@ -165,7 +170,10 @@ public interface ShortLinkActualRemoteService {
             @RequestParam("fullShortUrl") String fullShortUrl,
             @RequestParam("gid") String gid,
             @RequestParam("startDate") String startDate,
-            @RequestParam("endDate") String endDate
+            @RequestParam("endDate") String endDate,
+            @RequestParam("enableStatus") Integer enableStatus,
+            @RequestParam("current") Long current,
+            @RequestParam("size") Long size
     );
 
     /**
@@ -174,12 +182,16 @@ public interface ShortLinkActualRemoteService {
      * @param gid       分组标识
      * @param startDate 开始时间
      * @param endDate   结束时间
+     * @param current   当前页
+     * @param size      当前页数据量
      * @return 分组短链接监控访问记录信息
      */
     @GetMapping("/api/short-link/v1/stats/access-record/group")
     Result<Page<ShortLinkStatsAccessRecordRespDTO>> groupShortLinkStatsAccessRecord(
             @RequestParam("gid") String gid,
             @RequestParam("startDate") String startDate,
-            @RequestParam("endDate") String endDate
+            @RequestParam("endDate") String endDate,
+            @RequestParam("current") Long current,
+            @RequestParam("size") Long size
     );
 }

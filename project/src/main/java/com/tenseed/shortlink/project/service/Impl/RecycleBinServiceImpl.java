@@ -52,14 +52,8 @@ public class RecycleBinServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLin
 
     @Override
     public IPage<ShortLinkPageRespDTO> pageRecycleBinShortLink(ShortLinkRecycleBinPageReqDTO requestParam) {
-        // 构造查询条件：根据分组 ID 查询未删除的启用短链接，按创建时间倒序排列
-        LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
-                .in(ShortLinkDO::getGid, requestParam.getGidList())
-                .eq(ShortLinkDO::getEnableStatus, 1)
-                .orderByDesc(ShortLinkDO::getUpdateTime);
-
         // 执行分页查询
-        IPage<ShortLinkDO> resultPage = baseMapper.selectPage(requestParam, queryWrapper);
+        IPage<ShortLinkDO> resultPage = baseMapper.pageRecycleBinLink(requestParam);
         // 转换查询结果为响应 DTO，并添加 http 前缀
         return resultPage.convert(each -> {
             ShortLinkPageRespDTO result = BeanUtil.toBean(each, ShortLinkPageRespDTO.class);

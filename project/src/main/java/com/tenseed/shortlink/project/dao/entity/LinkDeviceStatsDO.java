@@ -30,11 +30,6 @@ public class LinkDeviceStatsDO extends BaseDO {
     private String fullShortUrl;
 
     /**
-     * 分组标识，默认值为 'default'
-     */
-    private String gid;
-
-    /**
      * 日期
      */
     private LocalDate date;
