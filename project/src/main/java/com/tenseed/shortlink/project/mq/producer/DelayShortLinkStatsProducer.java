@@ -16,6 +16,7 @@ import static com.tenseed.shortlink.project.common.constant.RedisKeyConstant.DEL
  * 延迟消费短链接统计发送者
  */
 @Component
+@Deprecated // 弃用
 @RequiredArgsConstructor
 public class DelayShortLinkStatsProducer {
 

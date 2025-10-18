@@ -14,7 +14,6 @@ import com.tenseed.shortlink.project.dao.mapper.*;
 import com.tenseed.shortlink.project.dto.biz.ShortLinkStatsIncrementDTO;
 import com.tenseed.shortlink.project.dto.biz.ShortLinkStatsRecordDTO;
 import com.tenseed.shortlink.project.mq.idempotent.MessageQueueIdempotentHandler;
-import com.tenseed.shortlink.project.mq.producer.DelayShortLinkStatsProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -52,7 +51,6 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
     private final LinkDeviceStatsMapper linkDeviceStatsMapper;
     private final LinkNetworkStatsMapper linkNetworkStatsMapper;
     private final LinkStatsTodayMapper linkStatsTodayMapper;
-    private final DelayShortLinkStatsProducer delayShortLinkStatsProducer;
     private final StringRedisTemplate stringRedisTemplate;
     private final MessageQueueIdempotentHandler messageQueueIdempotentHandler;
 
@@ -91,10 +89,7 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
         fullShortUrl = Optional.ofNullable(fullShortUrl).orElse(statsRecord.getFullShortUrl());
         RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(String.format(LOCK_GID_UPDATE_KEY, fullShortUrl));
         RLock rLock = readWriteLock.readLock();
-        if (!rLock.tryLock()) {
-            delayShortLinkStatsProducer.send(statsRecord);
-            return;
-        }
+        rLock.lock();
         try {
             // 假如 gid 是 null，通过短链接跳转表查询对应的分组ID
             if (StrUtil.isBlank(gid)) {
