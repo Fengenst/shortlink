@@ -217,14 +217,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     /**
      * 短链接访问统计
      *
-     * @param fullShortUrl 完整短链接
-     * @param gid          分组标识
      * @param statsRecord  短链接统计实体参数
      */
-    public void shortLinkStats(String fullShortUrl, String gid, ShortLinkStatsRecordDTO statsRecord) {
+    public void shortLinkStats(ShortLinkStatsRecordDTO statsRecord) {
         Map<String, String> producerMap = new HashMap<>();
-        producerMap.put("fullShortUrl", fullShortUrl);
-        producerMap.put("gid", gid);
         producerMap.put("statsRecord", JSON.toJSONString(statsRecord));
         shortLinkStatsSaveProducer.send(producerMap);
     }
@@ -457,8 +453,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         // 2️.第一次检查：无锁快速路径—— 先查 Redis 缓存，命中则直接跳转，避免加锁和查库开销
         String originalLink = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
         if (StrUtil.isNotBlank(originalLink)) {
-            ShortLinkStatsRecordDTO statsRecord = buildLinkStatsRecordAndSetUser(fullShortUrl, request, response);
-            shortLinkStats(fullShortUrl, null, statsRecord); // 跳转成功则进行短链接基础访问统计
+            shortLinkStats(buildLinkStatsRecordAndSetUser(fullShortUrl, request, response)); // 跳转成功则进行短链接基础访问统计
             ((HttpServletResponse) response).sendRedirect(originalLink);
             return; // 缓存命中，流程结束
         }
@@ -487,8 +482,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             // 若此时缓存已存在，直接跳转，避免重复查库（节省 DB 资源，提升并发效率）
             originalLink = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
             if (StrUtil.isNotBlank(originalLink)) {
-                ShortLinkStatsRecordDTO statsRecord = buildLinkStatsRecordAndSetUser(fullShortUrl, request, response);
-                shortLinkStats(fullShortUrl, null, statsRecord); // 跳转成功则进行短链接基础访问统计
+                shortLinkStats(buildLinkStatsRecordAndSetUser(fullShortUrl, request, response)); // 跳转成功则进行短链接基础访问统计
                 ((HttpServletResponse) response).sendRedirect(originalLink);
                 return;
             }
@@ -527,8 +521,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     LinkUtil.getLinkCacheValidTime(shortLinkDO.getValidDate()), TimeUnit.MILLISECONDS
             );
 
-            ShortLinkStatsRecordDTO statsRecord = buildLinkStatsRecordAndSetUser(fullShortUrl, request, response);
-            shortLinkStats(fullShortUrl, shortLinkDO.getGid(), statsRecord); // 跳转成功则行短链接基础访问统计
+            shortLinkStats(buildLinkStatsRecordAndSetUser(fullShortUrl, request, response)); // 跳转成功则进行短链接基础访问统计
             ((HttpServletResponse) response).sendRedirect(shortLinkDO.getOriginUrl());
 
             // 11.若主表也无有效数据 → 说明短链已失效，静默返回（也可跳转 404 页面）
