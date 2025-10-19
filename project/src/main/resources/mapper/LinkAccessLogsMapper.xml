@@ -13,8 +13,8 @@
              ON t1.full_short_url = tlal.full_short_url
         WHERE tlal.full_short_url = #{param.fullShortUrl}
           AND t1.gid = #{param.gid}
-          AND t1.del_flag = 0
-          AND t1.enable_status = #{param.enableStatus}
+          AND t1.del_flag = '0'
+          AND t1.enable_status = '0'
           AND tlal.create_time BETWEEN #{param.startDate} AND #{param.endDate}
         GROUP BY tlal.full_short_url, t1.gid, tlal.ip
         ORDER BY count DESC
@@ -55,7 +55,7 @@
                                   ON tl.full_short_url = tlal.full_short_url
               WHERE tlal.full_short_url = #{param.fullShortUrl}
                 AND tl.gid = #{param.gid}
-                AND tl.enable_status = #{param.enableStatus}
+                AND tl.enable_status = '0'
                 AND tl.del_flag = '0'
               GROUP BY tlal.user) AS user_counts;
     </select>
@@ -75,7 +75,7 @@
         tlal.full_short_url = #{fullShortUrl}
         AND tl.gid = #{gid}
         AND tl.del_flag = '0'
-        AND tl.enable_status = #{enableStatus}
+        AND tl.enable_status = '0'
         AND tlal.user IN
         <foreach item="item" index="index" collection="userAccessLogsList" open="(" separator="," close=")">
             #{item}
@@ -116,7 +116,7 @@
         WHERE tlal.full_short_url = #{param.fullShortUrl}
           AND tl.gid = #{param.gid}
           AND tl.del_flag = '0'
-          AND tl.enable_status = #{param.enableStatus}
+          AND tl.enable_status = '0'
           AND tlal.create_time BETWEEN #{param.startDate} AND #{param.endDate}
         GROUP BY tlal.full_short_url,
                  tl.gid;

@@ -289,14 +289,14 @@ public class ShortLinkStatsServiceImpl implements ShortLinkStatsService {
         List<ShortLinkStatsDeviceRespDTO> deviceStats = new ArrayList<>();
         List<HashMap<String, Object>> linkDeviceStatsDOList = linkDeviceStatsMapper.listDeviceStatsByShortLink(requestParam);
         int deviceSum = linkDeviceStatsDOList.stream()
-                .mapToInt(each -> Integer.parseInt(each.get("count").toString()))
+                .mapToInt(each -> Integer.parseInt(each.get("cnt").toString()))
                 .sum();
         linkDeviceStatsDOList.forEach(each -> {
-            double ratio = (double) Integer.parseInt(each.get("count").toString()) / deviceSum;
+            double ratio = (double) Integer.parseInt(each.get("cnt").toString()) / deviceSum;
             double actualRatio = Math.round(ratio * 100.0) / 100.0;
             ShortLinkStatsDeviceRespDTO linkStatsDeviceRespDTO = ShortLinkStatsDeviceRespDTO.builder()
                     .device(each.get("device").toString())
-                    .cnt(Integer.parseInt(each.get("count").toString()))
+                    .cnt(Integer.parseInt(each.get("cnt").toString()))
                     .ratio(actualRatio)
                     .build();
             deviceStats.add(linkStatsDeviceRespDTO);
@@ -316,14 +316,14 @@ public class ShortLinkStatsServiceImpl implements ShortLinkStatsService {
         List<ShortLinkStatsNetworkRespDTO> networkStats = new ArrayList<>();
         List<HashMap<String, Object>> linkNetworkStatsDOList = linkNetworkStatsMapper.listNetworkStatsByShortLink(requestParam);
         int networkSum = linkNetworkStatsDOList.stream()
-                .mapToInt(each -> Integer.parseInt(each.get("count").toString()))
+                .mapToInt(each -> Integer.parseInt(each.get("cnt").toString()))
                 .sum();
         linkNetworkStatsDOList.forEach(each -> {
-            double ratio = (double) Integer.parseInt(each.get("count").toString()) / networkSum;
+            double ratio = (double) Integer.parseInt(each.get("cnt").toString()) / networkSum;
             double actualRatio = Math.round(ratio * 100.0) / 100.0;
             ShortLinkStatsNetworkRespDTO linkStatsNetworkRespDTO = ShortLinkStatsNetworkRespDTO.builder()
                     .network(each.get("network").toString())
-                    .cnt(Integer.parseInt(each.get("count").toString()))
+                    .cnt(Integer.parseInt(each.get("cnt").toString()))
                     .ratio(actualRatio)
                     .build();
             networkStats.add(linkStatsNetworkRespDTO);
