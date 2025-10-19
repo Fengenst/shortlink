@@ -428,7 +428,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         // 更新数据库后，删除 Redis 缓存，处理缓存一致性
         // 只有当有效期相关字段发生变化时才清除缓存
         if (!Objects.equals(existedShortLinkDO.getValidDateType(), requestParam.getValidDateType())
-                || !Objects.equals(existedShortLinkDO.getValidDate(), requestParam.getValidDate())) {
+                || !Objects.equals(existedShortLinkDO.getValidDate(), requestParam.getValidDate())
+                || !Objects.equals(existedShortLinkDO.getOriginUrl(), requestParam.getOriginUrl())) {
             stringRedisTemplate.delete(String.format(GOTO_SHORT_LINK_KEY, requestParam.getFullShortUrl()));
             // 当原链接已过期，新链接为永久有效或未过期时，清除NULL缓存
             if (existedShortLinkDO.getValidDate() != null && existedShortLinkDO.getValidDate().before(new Date())) {
