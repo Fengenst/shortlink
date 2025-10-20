@@ -7,7 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.util.Date;
 
 /**
  * 访问网络统计实体
@@ -32,7 +32,7 @@ public class LinkNetworkStatsDO extends BaseDO {
     /**
      * 日期
      */
-    private LocalDate date;
+    private Date date;
 
     /**
      * 访问量
