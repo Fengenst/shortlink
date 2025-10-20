@@ -1,6 +1,7 @@
 package com.tenseed.shortlink.admin.remote;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tenseed.shortlink.admin.common.config.OpenFeignConfiguration;
 import com.tenseed.shortlink.admin.common.convention.result.Result;
 import com.tenseed.shortlink.admin.remote.dto.req.*;
 import com.tenseed.shortlink.admin.remote.dto.resp.*;
@@ -15,7 +16,11 @@ import java.util.List;
 /**
  * 短链接中台远程调用服务
  */
-@FeignClient(value = "short-link-project", url = "${aggregation.remote-url:}")
+@FeignClient(
+        value = "short-link-project",
+        url = "${aggregation.remote-url:}",
+        configuration = OpenFeignConfiguration.class
+)
 public interface ShortLinkActualRemoteService {
 
     /**

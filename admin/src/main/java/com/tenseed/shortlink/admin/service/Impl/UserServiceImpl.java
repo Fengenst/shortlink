@@ -75,7 +75,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void register(UserRegisterReqDTO requestParam) {
         // 检查用户名是否已存在（布隆过滤器判断）
         if (!isUsernameAvailable(requestParam.getUsername())) {
@@ -96,8 +96,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
                 throw new ClientException(USER_SAVE_ERROR);
             }
             // 更新布隆过滤器
-            userRegisterCachePenetrationBloomFilter.add(requestParam.getUsername());
             groupService.saveGroup(requestParam.getUsername(), "默认分组");
+            userRegisterCachePenetrationBloomFilter.add(requestParam.getUsername());
         } catch (DuplicateKeyException ex) {
             throw new ClientException(USER_EXIST);
         } finally {
