@@ -211,13 +211,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .browser(browser)
                 .device(device)
                 .network(network)
+                .currentDate(new Date())
                 .build();
     }
 
     /**
      * 短链接访问统计
      *
-     * @param statsRecord  短链接统计实体参数
+     * @param statsRecord 短链接统计实体参数
      */
     public void shortLinkStats(ShortLinkStatsRecordDTO statsRecord) {
         Map<String, String> producerMap = new HashMap<>();
@@ -428,14 +429,16 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 || !Objects.equals(existedShortLinkDO.getOriginUrl(), requestParam.getOriginUrl())) {
             stringRedisTemplate.delete(String.format(GOTO_SHORT_LINK_KEY, requestParam.getFullShortUrl()));
             // 当原链接已过期，新链接为永久有效或未过期时，清除NULL缓存
-            if (existedShortLinkDO.getValidDate() != null && existedShortLinkDO.getValidDate().before(new Date())) {
-                if (Objects.equals(requestParam.getValidDateType(), ValidDateTypeEnum.PERMANENT.getType())
-                        || requestParam.getValidDate().after(new Date())) {
-                    stringRedisTemplate.delete(String.format(GOTO_NULL_SHORT_LINK_KEY, requestParam.getFullShortUrl()));
+            Date currentDate = new Date();
+            if (existedShortLinkDO.getValidDate() != null && existedShortLinkDO.getValidDate().before(currentDate)) {
+                if (Objects.equals(requestParam.getValidDateType(), ValidDateTypeEnum.PERMANENT.getType()) || requestParam.getValidDate().after(currentDate)) {
+                    if (Objects.equals(requestParam.getValidDateType(), ValidDateTypeEnum.PERMANENT.getType())
+                            || requestParam.getValidDate().after(new Date())) {
+                        stringRedisTemplate.delete(String.format(GOTO_NULL_SHORT_LINK_KEY, requestParam.getFullShortUrl()));
+                    }
                 }
             }
         }
-
     }
 
     @SneakyThrows
