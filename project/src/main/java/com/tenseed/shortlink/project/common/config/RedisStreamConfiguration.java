@@ -49,7 +49,7 @@ public class RedisStreamConfiguration {
     }
 
     @Bean
-    public Subscription shortLinkStatsSaveConsumerSubscription(ExecutorService asyncStreamConsumer, Subscription subscription) {
+    public Subscription shortLinkStatsSaveConsumerSubscription(ExecutorService asyncStreamConsumer) {
         StreamMessageListenerContainer.StreamMessageListenerContainerOptions<String, MapRecord<String, String, String>> options =
                 StreamMessageListenerContainer.StreamMessageListenerContainerOptions
                         .builder()
@@ -67,6 +67,7 @@ public class RedisStreamConfiguration {
                         .autoAcknowledge(true)
                         .build();
         StreamMessageListenerContainer<String, MapRecord<String, String, String>> listenerContainer = StreamMessageListenerContainer.create(redisConnectionFactory, options);
+        Subscription subscription = listenerContainer.register(streamReadRequest, shortLinkStatsSaveConsumer);
         listenerContainer.start();
         return subscription;
     }

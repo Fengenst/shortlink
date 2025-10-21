@@ -130,8 +130,8 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
                         .fullShortUrl(fullShortUrl)
                         .date(currentDate)
                         .cnt(1)
-                        .province(actualProvince = unknownFlag ? "未知" : province)
-                        .city(actualCity = unknownFlag ? "未知" : localeResultObj.getString("city"))
+                        .province(actualProvince = unknownFlag ? actualProvince : province)
+                        .city(actualCity = unknownFlag ? actualCity : localeResultObj.getString("city"))
                         .adcode(unknownFlag ? "未知" : localeResultObj.getString("adcode"))
                         .country("中国")
                         .build();
